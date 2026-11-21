@@ -1,0 +1,29 @@
+# Sensitive and machine-specific data
+/dconf/
+/go/
+/mozilla/
+/pulse/
+/rustdesk/
+/session/
+/sublime-text/
+/systemd/
+/yay/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+
+# Secrets
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Old configurations and backups
+/quickshell/B2/
+/quickshell/Backup/
+/hypr/*backup*
+/hypr/*.bak-*
