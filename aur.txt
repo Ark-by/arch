@@ -1,0 +1,6 @@
+cloudflare-warp-bin
+logitech-g435-battery-bin
+logitech-g435-battery-bin-debug
+rustdesk-bin
+sublime-text-4
+yay
