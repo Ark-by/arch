@@ -1,7 +1,0 @@
-{
-  "name": "One Dark",
-  "bg": "#282c34", "surface": "#3e4451", "fg": "#abb2bf",
-  "accent": "#61afef", "muted": "#5c6370",
-  "ansi": ["#3f4451","#e06c75","#98c379","#e5c07b","#61afef","#c678dd","#56b6c2","#abb2bf",
-           "#5c6370","#e06c75","#98c379","#e5c07b","#61afef","#c678dd","#56b6c2","#ffffff"]
-}
