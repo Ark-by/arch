@@ -47,7 +47,7 @@
   networking.hostName = "desktop";
   networking.networkmanager.enable = true;
   networking.firewall.enable = true;            # вместо ufw
-  time.timeZone = "Europe/Astrakhan";
+  time.timeZone = "Europe/Samara";
 
   # ── звук (pipewire-alsa, pipewire-pulse, wireplumber) ──────────────────────
   services.pipewire = {
