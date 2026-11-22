@@ -1,0 +1,16 @@
+{
+  "policies": {
+    "Bookmarks": [
+      {
+        "Title": "Simple-Zsh-Theme",
+        "URL": "https://simple-zsh-theme.dev/",
+        "Placement": "toolbar"
+      },
+      {
+        "Title": "WallHaven",
+        "URL": "https://wallhaven.cc/",
+        "Placement": "toolbar"
+      }
+    ]
+  }
+}
