@@ -36,6 +36,7 @@ DO_AUR=1
 DO_CONFIG=1
 DO_EXTRAS=1
 DO_LY=1
+DO_RUSTDESK=1
 DRY_RUN=0
 ASSUME_YES=0
 
@@ -82,6 +83,7 @@ usage() {
   --no-config      не восстанавливать config/ в ~/.config
   --no-extras      не разворачивать extras/
   --no-ly          не включать Ly
+  --no-rustdesk    не настраивать RustDesk (uinput, портал)
   -h, --help       эта справка
 
 Запускать обычным пользователем, не через sudo.
@@ -98,6 +100,7 @@ while (($#)); do
         --no-config)   DO_CONFIG=0 ;;
         --no-extras)   DO_EXTRAS=0 ;;
         --no-ly)       DO_LY=0 ;;
+        --no-rustdesk) DO_RUSTDESK=0 ;;
         -h|--help)     usage; exit 0 ;;
         *)             die "Неизвестная опция: $1 (см. --help)" ;;
     esac
@@ -148,9 +151,11 @@ for p in "${PKG_LIST[@]}"; do
     NATIVE_REQUESTED+=("$p")
 done
 
-# Нужны конфигам, но отсутствовали в packages.txt:
-#   brightnessctl, playerctl — keybinds.lua; xdg-user-dirs — ~/Documents и RustDesk.
-NATIVE_REQUESTED+=(brightnessctl playerctl xdg-user-dirs)
+# Нужны конфигам и приложениям, но отсутствовали в packages.txt:
+#   brightnessctl, playerctl — keybinds.lua;
+#   xdg-user-dirs — ~/Documents, иначе RustDesk ругается на документы;
+#   xdg-desktop-portal — фронтенд порталов (rustdesk-bin его НЕ тянет).
+NATIVE_REQUESTED+=(brightnessctl playerctl xdg-user-dirs xdg-desktop-portal)
 
 AUR_TO_INSTALL=()
 for p in "${AUR_LIST_RAW[@]}"; do
@@ -511,6 +516,101 @@ if (( DO_LY )); then
 fi
 
 # =============================================================================
+# 5.5 RustDesk
+# =============================================================================
+#  Что нужно на Wayland, чтобы RustDesk заработал сразу:
+#    • xdg-desktop-portal + бэкенд hyprland — захват экрана через PipeWire;
+#    • /dev/uinput — эмуляция ввода при удалённом управлении;
+#    • XDG_CURRENT_DESKTOP=Hyprland — иначе портал не выберет бэкенд.
+#  Пакет rustdesk-bin эти зависимости НЕ приносит: только gtk3, xdotool,
+#  libxcb, libxfixes, libpulse, libva, libvdpau, pam и gst-plugin-pipewire.
+setup_rustdesk() {
+    if ! command -v rustdesk >/dev/null 2>&1; then
+        manual "rustdesk не установлен — проверьте AUR-пакет rustdesk-bin."
+        return 0
+    fi
+
+    # --- /dev/uinput: модуль при старте + права для группы input ---
+    printf 'uinput\n' | $SUDO tee /etc/modules-load.d/uinput.conf >/dev/null
+    $SUDO modprobe uinput 2>/dev/null || warned "modprobe uinput не удался."
+    printf '%s\n' 'KERNEL=="uinput", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"' \
+        | $SUDO tee /etc/udev/rules.d/60-uinput.rules >/dev/null
+    $SUDO udevadm control --reload-rules 2>/dev/null || true
+    $SUDO udevadm trigger --subsystem-match=misc 2>/dev/null || true
+    ok "uinput настроен: модуль + udev-правило."
+
+    # --- группа input ---
+    if id -nG "$USER" 2>/dev/null | tr ' ' '\n' | grep -qx input; then
+        ok "Пользователь уже в группе input."
+    elif $SUDO usermod -aG input "$USER"; then
+        ok "Пользователь добавлен в группу input (нужен перезаход)."
+    else
+        manual "Не удалось добавить $USER в группу input: sudo usermod -aG input $USER"
+    fi
+
+    if ! id -nG 2>/dev/null | tr ' ' '\n' | grep -qx input; then
+        warned "В текущей сессии группы input ещё нет — перезайдите, иначе ввод не заработает."
+    fi
+
+    # --- XDG_CURRENT_DESKTOP: по нему портал выбирает бэкенд ---
+    case "${XDG_CURRENT_DESKTOP:-}" in
+        *Hyprland*) ok "XDG_CURRENT_DESKTOP=Hyprland." ;;
+        "")         manual "XDG_CURRENT_DESKTOP пуст — портал не выберет бэкенд.
+    Добавьте в hyprland.lua: hl.env(\"XDG_CURRENT_DESKTOP\", \"Hyprland\")" ;;
+        *)          warned "XDG_CURRENT_DESKTOP=${XDG_CURRENT_DESKTOP} — ожидалось Hyprland." ;;
+    esac
+
+    # --- перезапуск порталов в пользовательской сессии ---
+    if [[ -n "${XDG_RUNTIME_DIR:-}" ]] && command -v systemctl >/dev/null 2>&1; then
+        if systemctl --user restart xdg-desktop-portal xdg-desktop-portal-hyprland 2>/dev/null; then
+            ok "Порталы перезапущены."
+        else
+            warned "Не удалось перезапустить порталы (нет графической сессии?)."
+        fi
+    fi
+
+    # --- проверка, что ScreenCast реально отвечает ---
+    if command -v gdbus >/dev/null 2>&1; then
+        if gdbus call --session \
+             --dest org.freedesktop.portal.Desktop \
+             --object-path /org/freedesktop/portal/desktop \
+             --method org.freedesktop.DBus.Properties.Get \
+             org.freedesktop.portal.ScreenCast version >/dev/null 2>&1; then
+            ok "Портал ScreenCast отвечает: захват экрана доступен."
+        else
+            manual "Портал ScreenCast не отвечает. Проверьте:
+    pacman -Q xdg-desktop-portal xdg-desktop-portal-hyprland
+    systemctl --user status xdg-desktop-portal-hyprland"
+        fi
+    else
+        warned "gdbus не найден — проверка ScreenCast пропущена."
+    fi
+
+    # --- состояние устройства ---
+    if [[ -e /dev/uinput ]]; then
+        info "/dev/uinput: $(ls -l /dev/uinput 2>/dev/null | awk '{print $1, $3, $4}')"
+    else
+        manual "/dev/uinput отсутствует — перезагрузитесь, модуль поднимется при старте."
+    fi
+
+    # --- служба для доступа без входа в систему (опционально) ---
+    if [[ -f /usr/lib/systemd/system/rustdesk.service ]]; then
+        if confirm "Включить rustdesk.service (доступ без входа в систему)?"; then
+            if $SUDO systemctl enable --now rustdesk; then
+                ok "rustdesk.service включён."
+            else
+                manual "Не удалось включить rustdesk.service."
+            fi
+        fi
+    fi
+}
+
+if (( DO_RUSTDESK )); then
+    section "RustDesk"
+    setup_rustdesk
+fi
+
+# =============================================================================
 # 6. Проверки
 # =============================================================================
 section "Проверки"
@@ -533,6 +633,8 @@ check_cmd brightnessctl "клавиши яркости"
 check_cmd playerctl     "мультимедиа-клавиши"
 check_cmd uwsm          "сессия Hyprland через UWSM"
 check_cmd fastfetch     "пакет fastfetch (приветствие в терминале)"
+check_cmd rustdesk      "AUR rustdesk-bin"
+check_cmd gdbus         "пакет glib2 (проверка портала)"
 
 # --- shell и fastfetch ---
 if [[ "${SHELL:-}" == */zsh ]]; then
@@ -621,6 +723,15 @@ cat <<'NEXT'
 
 Если Ly не запустится — Ctrl+Alt+F3 (или F6) даёт резервную консоль:
 tty2 отдан Ly, остальные tty свободны.
+
+RustDesk:
+  • первый вход в систему после установки — нужен, чтобы заработала группа input;
+  • при первом подключении RustDesk спросит разрешение на захват экрана (портал);
+  • если картинка есть, а мышь/клавиатура не работают — проверьте:
+        ls -l /dev/uinput          (должно быть crw-rw---- root input)
+        id -nG | grep input
+  • управление этим ПК по Wayland всё равно ограничено порталом:
+    показ экрана работает надёжно, ввод — как повезёт с версией RustDesk.
 
 Альтернатива без DM — ~/.zprofile:
 
