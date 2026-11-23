@@ -124,7 +124,7 @@ cand            = { fg = "#9ece6a" }
 rest            = { fg = "#a9b1d6" }
 desc            = { fg = "#bb9af7" }
 separator       = "  "
-separator_style = { fg = "#626880" }
+separator_style = { fg = "#565f89" }
 
 # : }}}
 
@@ -194,7 +194,7 @@ rules = [
   { mime = "application/*exec*", fg = "#f7768e" },
 
 	# Fallback
-	{ url = "*", fg = "#c6d0f5" },
+	{ url = "*", fg = "#c0caf5" },
 	{ url = "*/", fg = "#7aa2f7" },
 ]
 

@@ -18,10 +18,11 @@ Variants {
 
         SystemClock { id: clock; precision: SystemClock.Minutes }
 
+        // ---------------- ЛЕВАЯ ГРУППА ----------------
         RowLayout {
-            anchors.fill: parent
+            anchors.left: parent.left
             anchors.leftMargin: 12
-            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
             spacing: 12
 
             IconButton {                      // меню приложений (логотип Arch)
@@ -40,74 +41,73 @@ Variants {
                     Text {
                         anchors.centerIn: parent
                         text: modelData.id
-                        color: modelData.focused ? Theme.bg : Theme.fg
+                        color: modelData.focused ? Theme.bg : Theme.accent
+                        font.bold: true
                     }
                     MouseArea { anchors.fill: parent; onClicked: modelData.activate() }
                 }
             }
 
             Text {                            // монитор ресурсов
-                text: "CPU " + ("" + Math.round(SysInfo.cpu)).padStart(3, " ") + "%   RAM " + ("" + Math.round(SysInfo.memPct)).padStart(3, " ") + "%"
-                color: Theme.fg; font.pixelSize: 13
+                text: "CPU " + ("" + Math.round(SysInfo.cpu)).padStart(3, "") + "% RAM " + ("" + Math.round(SysInfo.memPct)).padStart(3, "") + "%"
+                color: Theme.accent; font.pixelSize: 13; font.bold: true
                 font.family: "JetBrainsMono Nerd Font"
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: UiState.toggle("monitor") }
             }
+        }
 
-            Item { Layout.fillWidth: true }
+        // ---------------- ЦЕНТР: ДАТА И ВРЕМЯ ----------------
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            text: Qt.locale("ru_RU").toString(clock.date, "dddd d MMMM  HH:mm").replace(/(^|\s)(\S)/g, (m, a, b) => a + b.toUpperCase())
+            color: Theme.accent
+            font.pixelSize: 14
+            font.bold: true
+        }
 
-            Text {
-                text: Qt.locale("ru_RU").toString(clock.date, "dddd d MMMM  HH:mm").replace(/(^|\s)(\S)/g, (m, a, b) => a + b.toUpperCase())
-                color: Theme.fg; font.pixelSize: 14
-            }
-
-            Item { Layout.fillWidth: true }
+        // ---------------- ПРАВАЯ ГРУППА ----------------
+        RowLayout {
+            anchors.right: parent.right
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 12
 
             IconButton {                      // обход блокировок (щит)
                 text: "\uf132"
+                baseColor: Theme.accent
+                hoverColor: Theme.fg
                 onClicked: UiState.toggle("services")
             }
             IconButton {                      // горячие клавиши (клавиатура)
                 text: "\uf11c"
+                baseColor: Theme.accent
+                hoverColor: Theme.fg
                 onClicked: UiState.toggle("shortcuts")
             }
             IconButton {                      // выбор обоев (картинка)
                 text: "\uf03e"
+                baseColor: Theme.accent
+                hoverColor: Theme.fg
                 onClicked: UiState.toggle("wallpaper")
             }
             IconButton {                      // смена темы (кисть)
                 text: "\uf1fc"
+                baseColor: Theme.accent
+                hoverColor: Theme.fg
                 onClicked: UiState.toggle("themes")
             }
-            Rectangle {                       // раскладка клавиатуры
-                implicitWidth: layoutText.implicitWidth
-                implicitHeight: 22
-                radius: 6
-                color: "transparent"
-                Text {
-                    id: layoutText
-                    anchors.centerIn: parent
-                    text: KbLayout.code
-                    color: Theme.fg
-                    font.pixelSize: 13
-                    font.bold: true
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"])
-                }
-            }
-            BatteryWidget {
-                Layout.alignment: Qt.AlignVCenter
-
-                panelBackground: Theme.bg
-                panelForeground: Theme.fg
-                panelSurface: Theme.surface
-                panelAccent: Theme.accent
+            IconButton {                      // раскладка клавиатуры
+                            text: KbLayout.code
+                            font.pixelSize: 15
+                            font.bold: true
+                            baseColor: Theme.accent
+                            hoverColor: Theme.fg
+                            onClicked: Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"])
             }
             IconButton {                      // питание
                 text: "\uf011"
-                hoverColor: "#f38ba8"
+                hoverColor: "#f7768e"
                 onClicked: UiState.toggle("power")
             }
         }

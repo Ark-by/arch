@@ -28,7 +28,7 @@ bind(mainMod .. " + escape", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null
 bind(mainMod .. " + Q", hl.dsp.exec_cmd(terminal),    "Приложения: Терминал")
 bind(mainMod .. " + B", hl.dsp.exec_cmd(browser),     "Приложения: Браузер")
 bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager), "Приложения: Файловый менеджер")
-bind(mainMod .. " + S", hl.dsp.exec_cmd("subl"),      "Приложения: Sublime Text")
+bind(mainMod .. " + S", hl.dsp.exec_cmd("zed"),       "Приложения: Zed")
 
 -- Меню панели (Quickshell)
 bind(mainMod .. " + R",  hl.dsp.exec_cmd("qs ipc call ui launcher"),  "Меню панели: Меню приложений")
@@ -69,12 +69,10 @@ bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   "Окна: Перета�
 bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), "Окна: Изменить размер окна", { mouse = true })
 
 -- Мультимедиа-клавиши (в справке одной строкой)
-bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), "Система: Звук, яркость, плеер | Fn", { locked = true, repeating = true })
+bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), "Система: Звук, плеер | Fn", { locked = true, repeating = true })
 bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),      nil, { locked = true, repeating = true })
 bind("XF86AudioMute",        hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),     nil, { locked = true, repeating = true })
 bind("XF86AudioMicMute",     hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),   nil, { locked = true, repeating = true })
-bind("XF86MonBrightnessUp",  hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%+"),                  nil, { locked = true, repeating = true })
-bind("XF86MonBrightnessDown",hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-"),                  nil, { locked = true, repeating = true })
 bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       nil, { locked = true })
 bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), nil, { locked = true })
 bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), nil, { locked = true })

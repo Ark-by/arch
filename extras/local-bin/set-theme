@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# set-theme — применяет тему из ~/.config/themes/<name>.json ко всем компонентам:
+#   quickshell (панель), kitty, hyprland, yazi (flavor + tmtheme), zed (тема)
+# Шаблоны: ~/.config/themes/templates/{flavor.toml.tpl,tmtheme.xml.tpl,zed-theme.json.tpl}
+# Опциональные слоты палитры в JSON: name, orange, teal, type, operator,
+#   border_dark, highlight, elevated, bg2, bg3, muted2, cyan_dark
+set -euo pipefail
+
+name="${1:-}"
+[[ -n "$name" ]] || { echo "usage: set-theme <name>" >&2; exit 2; }
+
+cfg="${XDG_CONFIG_HOME:-$HOME/.config}"
+themes="$cfg/themes"
+tpl="$themes/templates"
+src="$themes/${name%.json}.json"
+
+[[ -f "$src" ]] || { echo "set-theme: нет темы: $src" >&2; exit 1; }
+command -v jq >/dev/null || { echo "set-theme: нужен jq" >&2; exit 1; }
+jq -e . "$src" >/dev/null || { echo "set-theme: битый JSON: $src" >&2; exit 1; }
+
+get() { jq -r "$1" "$src"; }
+opt() { jq -r --arg k "$1" '.[$k] // empty' "$src"; }
+ansi() { jq -r ".ansi[$1]" "$src"; }
+pick() { if [[ -n "$1" ]]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
+
+BG=$(get '.bg')
+SURFACE=$(get '.surface')
+FG=$(get '.fg')
+ACCENT=$(get '.accent')
+MUTED=$(get '.muted')
+TITLE=$(pick "$(opt name)" "$name")
+
+A=()
+for i in $(seq 0 15); do A[$i]=$(ansi "$i"); done
+
+ORANGE=$(pick      "$(opt orange)"      "${A[11]}")
+TEAL=$(pick        "$(opt teal)"        "${A[6]}")
+TYPE=$(pick        "$(opt type)"        "$TEAL")
+OPERATOR=$(pick    "$(opt operator)"    "$TEAL")
+CYAN_DARK=$(pick   "$(opt cyan_dark)"   "${A[6]}")
+BORDER_DARK=$(pick "$(opt border_dark)" "${A[0]}")
+HIGHLIGHT=$(pick   "$(opt highlight)"   "${A[8]}")
+ELEVATED=$(pick    "$(opt elevated)"    "$BG")
+BG2=$(pick         "$(opt bg2)"         "$SURFACE")
+BG3=$(pick         "$(opt bg3)"         "$SURFACE")
+MUTED2=$(pick      "$(opt muted2)"      "$MUTED")
+
+ZED_ALPHA="${ZED_ALPHA:-cc}"
+ZED_BG="${BG}${ZED_ALPHA}"
+
+render() {
+  local tplfile="$1" dest="$2"
+  if [[ ! -f "$tplfile" ]]; then
+    echo "set-theme: нет шаблона: $tplfile (пропуск)" >&2
+    return 0
+  fi
+  local args=(
+    -e "s|@TITLE@|$TITLE|g"
+    -e "s|@ZED_BG@|$ZED_BG|g"
+    -e "s|@BG@|$BG|g"
+    -e "s|@SURFACE@|$SURFACE|g"
+    -e "s|@FG@|$FG|g"
+    -e "s|@ACCENT@|$ACCENT|g"
+    -e "s|@MUTED@|$MUTED|g"
+    -e "s|@MUTED2@|$MUTED2|g"
+    -e "s|@ORANGE@|$ORANGE|g"
+    -e "s|@TEAL@|$TEAL|g"
+    -e "s|@TYPE@|$TYPE|g"
+    -e "s|@CYAN_DARK@|$CYAN_DARK|g"
+    -e "s|@OPERATOR@|$OPERATOR|g"
+    -e "s|@BORDER_DARK@|$BORDER_DARK|g"
+    -e "s|@HIGHLIGHT@|$HIGHLIGHT|g"
+    -e "s|@ELEVATED@|$ELEVATED|g"
+    -e "s|@BG2@|$BG2|g"
+    -e "s|@BG3@|$BG3|g"
+  )
+  local i
+  for i in $(seq 0 15); do args+=(-e "s|@ANSI$i@|${A[$i]}|g"); done
+  mkdir -p "$(dirname "$dest")"
+  sed "${args[@]}" "$tplfile" > "$dest"
+}
+
+# --- 1. Quickshell ---
+mkdir -p "$cfg/quickshell"
+cp "$src" "$cfg/quickshell/theme.json"
+
+# --- 2. kitty ---
+mkdir -p "$cfg/kitty"
+{
+  printf 'background %s\n' "$BG"
+  printf 'foreground %s\n' "$FG"
+  printf 'cursor %s\n' "$ACCENT"
+  printf 'selection_background %s\n' "$ACCENT"
+  printf 'selection_foreground %s\n' "$BG"
+  for i in $(seq 0 15); do printf 'color%d %s\n' "$i" "${A[$i]}"; done
+} > "$cfg/kitty/theme.conf"
+command -v pkill >/dev/null 2>&1 && pkill -USR1 kitty 2>/dev/null || true
+
+# --- 3. Hyprland ---
+mkdir -p "$cfg/hypr"
+a="${ACCENT#\#}"
+m="${MUTED#\#}"
+cat > "$cfg/hypr/colors.lua" <<EOF
+return {
+  active = "rgba(${a}ff)",
+  inactive = "rgba(${m}aa)",
+}
+EOF
+command -v hyprctl >/dev/null 2>&1 && hyprctl reload >/dev/null 2>&1 || true
+
+# --- 4. yazi ---
+yazi_flavor="${YAZI_FLAVOR:-tokyo-night}"
+yazi_dir="$cfg/yazi/flavors/$yazi_flavor.yazi"
+render "$tpl/flavor.toml.tpl" "$yazi_dir/flavor.toml"
+render "$tpl/tmtheme.xml.tpl" "$yazi_dir/tmtheme.xml"
+
+# --- 5. Zed ---
+zed_theme_name="Ark $TITLE"
+render "$tpl/zed-theme.json.tpl" "$cfg/zed/themes/ark-dynamic.json"
+zed_settings="$cfg/zed/settings.json"
+if [[ -f "$zed_settings" ]] && jq -e . "$zed_settings" >/dev/null 2>&1; then
+  tmp="$(mktemp)"
+  jq --arg t "$zed_theme_name" '.theme = $t' "$zed_settings" > "$tmp" && mv "$tmp" "$zed_settings"
+  echo "Zed: включена тема «$zed_theme_name»"
+else
+  echo "Zed: выбери тему «$zed_theme_name» вручную (theme: toggle)"
+fi
+
+echo "Тема применена: $TITLE"
+echo "  kitty / hyprland / quickshell — обновлены"
+echo "  yazi: flavors/$yazi_flavor.yazi"
+echo "  zed:  themes/ark-dynamic.json"

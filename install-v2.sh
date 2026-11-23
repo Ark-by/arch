@@ -152,10 +152,10 @@ for p in "${PKG_LIST[@]}"; do
 done
 
 # Нужны конфигам и приложениям, но отсутствовали в packages.txt:
-#   brightnessctl, playerctl — keybinds.lua;
+#   playerctl — keybinds.lua;
 #   xdg-user-dirs — ~/Documents, иначе RustDesk ругается на документы;
 #   xdg-desktop-portal — фронтенд порталов (rustdesk-bin его НЕ тянет).
-NATIVE_REQUESTED+=(brightnessctl playerctl xdg-user-dirs xdg-desktop-portal)
+NATIVE_REQUESTED+=(playerctl xdg-user-dirs xdg-desktop-portal)
 
 AUR_TO_INSTALL=()
 for p in "${AUR_LIST_RAW[@]}"; do
@@ -628,8 +628,7 @@ check_cmd() {
 
 check_cmd hyprland      "пакет hyprland"
 check_cmd qs            "пакет quickshell (Super+R/W/T/Z/I/A)"
-check_cmd subl          "пакет sublime-text-4 (Super+S)"
-check_cmd brightnessctl "клавиши яркости"
+check_cmd zed           "пакет zed (Super+S)"
 check_cmd playerctl     "мультимедиа-клавиши"
 check_cmd uwsm          "сессия Hyprland через UWSM"
 check_cmd fastfetch     "пакет fastfetch (приветствие в терминале)"

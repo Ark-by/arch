@@ -92,7 +92,7 @@ PanelWindow {
                 anchors.top: parent.top
                 anchors.margins: 16
                 text: "\uf00d"
-                hoverColor: "#f38ba8"
+                hoverColor: "#f7768e"
                 onClicked: UiState.panel = ""
             }
 
