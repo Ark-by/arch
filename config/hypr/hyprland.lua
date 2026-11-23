@@ -36,7 +36,8 @@ hl.monitor({
 
 -- Set programs that you use
 local terminal    = "kitty"
-local fileManager = "dolphin"
+local fileManager = "kitty -e yazi"
+--local fileManager = "dolphin"
 local browser     = "firefox"
 
 
@@ -332,5 +333,4 @@ hl.window_rule({
 hl.on("hyprland.start", function()
     hl.exec_cmd("qs")
     hl.exec_cmd("dunst")
-    hl.exec_cmd("/usr/lib/polkit-kde-authentication-agent-1")
 end)

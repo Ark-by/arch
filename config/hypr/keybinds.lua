@@ -7,7 +7,8 @@
 -- =====================================================================
 local mainMod     = "SUPER"
 local terminal    = "kitty"
-local fileManager = "dolphin"
+local fileManager = "kitty -e yazi"
+--local fileManager = "dolphin"
 local browser     = "firefox"
 
 local function bind(keys, dispatcher, description, flags)

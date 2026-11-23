@@ -1,0 +1,14 @@
+[[mgr.prepend_keymap]]
+on   = [ "<Enter>" ]
+run  = "plugin smart-enter"
+desc = "Войти в папку или открыть файл"
+
+[[mgr.prepend_keymap]]
+on   = [ "~" ]
+run  = "help"
+desc = "Справка по клавишам"
+
+[[mgr.prepend_keymap]]
+on   = [ "Ё" ]
+run  = "help"
+desc = "Справка (рус. раскладка, Shift)"
