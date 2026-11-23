@@ -165,7 +165,7 @@ PanelWindow {
                 radius: 7
 
                 color: downloadProcess.running
-                    ? Theme.muted
+                    ? "#555555"
                     : downloadMouse.containsMouse
                         ? Qt.darker(Theme.accent, 1.15)
                         : Theme.accent

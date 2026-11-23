@@ -18,15 +18,15 @@
 				<key>activeGuide</key>
 				<string>#363b54</string>
 				<key>background</key>
-				<string>#1a1b26</string>
+				<string>#1d1f29</string>
 				<key>caret</key>
-				<string>#7aa2f7</string>
+				<string>#DBC08A</string>
 				<key>findHighlight</key>
 				<string>#ffa300</string>
 				<key>findHighlightForeground</key>
 				<string>#000000</string>
 				<key>foreground</key>
-				<string>#c0caf5</string>
+				<string>#AFBAD4ff</string>
 				<key>guide</key>
 				<string>#4f4f5e40</string>
 				<key>gutterForeground</key>
@@ -42,9 +42,9 @@
 				<key>popupCss</key>
 				<string>&lt;![CDATA[ html { color: #B376B3; background-color: #2b2d3a; padding: 10px; } a { color: #6189BB; line-height: 1.2; text-decoration: none; } .error, .deleted { color: #50B4DC; } .success, .inserted { color: #9DBA72; } .warning, .modified { color: #ffa300; } ]]&gt;</string>
 				<key>selection</key>
-				<string>#7aa2f740</string>
+				<string>#9D599D40</string>
 				<key>selectionBorder</key>
-				<string>#7aa2f7</string>
+				<string>#9D599D</string>
 				<key>shadow</key>
 				<string>#00000010</string>
 				<key>stackGuide</key>
@@ -72,7 +72,7 @@
 			<key>settings</key>
 			<dict>
 				<key>foreground</key>
-				<string>#565f89</string>
+				<string>#444b6a</string>
 			</dict>
 		</dict>
 		<dict>
@@ -1231,7 +1231,7 @@
 				<key>fontStyle</key>
 				<string>bold</string>
 				<key>foreground</key>
-				<string>#565f89</string>
+				<string>#444b6a</string>
 			</dict>
 		</dict>
 		<dict>

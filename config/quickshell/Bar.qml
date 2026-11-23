@@ -107,7 +107,7 @@ Variants {
             }
             IconButton {                      // питание
                 text: "\uf011"
-                hoverColor: "#f7768e"
+                hoverColor: "#f38ba8"
                 onClicked: UiState.toggle("power")
             }
         }
