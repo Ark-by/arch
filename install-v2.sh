@@ -77,7 +77,7 @@ usage() {
 Использование: ./install-v2.sh [опции]
 
   --dry-run        показать план, ничего не изменяя
-  --yes            не задавать вопросов (включает Ly без спроса)
+  --yes            не задавать вопросов (включает greetd без спроса)
   --no-packages    не ставить пакеты из packages.txt
   --no-aur         не ставить AUR-пакеты из aur.txt
   --no-config      не восстанавливать config/ в ~/.config
@@ -725,8 +725,8 @@ cat <<'NEXT'
   4. Панель: qs (если не запущена). Обои: Super+W. Темы: Super+T.
   5. Firefox: закладки появятся в новом профиле; в существующем проверьте about:policies.
 
-Если Ly не запустится — Ctrl+Alt+F3 (или F6) даёт резервную консоль:
-tty2 отдан Ly, остальные tty свободны.
+Если hyprlogin не запустится — Ctrl+Alt+F3 (или F6) даёт резервную консоль,
+там можно отключить экран входа: sudo systemctl disable greetd.service
 
 RustDesk:
   • первый вход в систему после установки — нужен, чтобы заработала группа input;
@@ -745,4 +745,14 @@ RustDesk:
     fi
 
 UFW установлен, но НЕ включён: sudo ufw enable
+
+# ─── очистка старых пакетов ──────────────────────────────────────────────────
+# Если система ставилась по прежней версии репозитория, после первого входа
+# можно убрать лишнее (в packages.txt этих пакетов уже нет):
+#
+#   sudo pacman -Rns yay-debug ly polkit-kde-agent wofi xf86-video-nouveau qt5-wayland dolphin htop vim smartmontools grim slurp usbutils openssh
+#   sudo pacman -Rns $(pacman -Qdtq)
+#
+# Вторая команда убирает сирот после первой. Если она ругнётся на пустой
+# список — сирот нет, всё уже чисто.
 NEXT

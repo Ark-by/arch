@@ -22,7 +22,6 @@ mkinitcpio
 nano
 noto-fonts
 noto-fonts-emoji
-openssh
 pipewire
 pipewire-alsa
 pipewire-jack
@@ -34,7 +33,6 @@ rustdesk-bin
 sudo
 ttf-jetbrains-mono-nerd
 ufw
-usbutils
 uwsm
 vulkan-nouveau
 wget
