@@ -115,3 +115,15 @@ pkill -x qs; qs &
 - **Темы в `config/themes/*.json`** (dracula, nord, gruvbox и т.д.) — это альтернативные палитры,
   их значения не унифицируются: они и есть источник при переключении.
 - **Все цвета картинок-логотипов** (PNG в `config/fastfetch/assets`) не анализируются — это не CSS.
+---
+
+## Обновление 2026-11-24
+
+- палитр стало **10** (добавлена `adventuretime.json` по данным Tintdex);
+- `set-theme` умеет необязательные `cursor`, `selection`, `selection_fg`;
+- в темах Zed панели (`status_bar`, `title_bar`, `surface`, `element`, `editor.subheader`)
+  снова с alpha 80 % — прозрачны только `editor.background`, `tab_bar`, `toolbar`, `panel`;
+- согласованные снапшоты `kitty/theme.conf`, `quickshell/theme.json`, `hypr/colors.lua`
+  перегенерированы из `themes/tokyonight.json`;
+- удалён дубль `yazi/flavors/tokyo-night.yazi`;
+- из `fastfetch/config.jsonc` убран отладочный `showErrors`.

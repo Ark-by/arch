@@ -7,7 +7,6 @@
   },
   "display": {
     "color": "cyan",
-    "showErrors": true,
   },
 
   "modules": [
