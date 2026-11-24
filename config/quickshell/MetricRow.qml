@@ -8,7 +8,7 @@ Item {
     property real percent: 0
     property bool showGraph: false
     property var history: []
-    readonly property color levelColor: percent > 85 ? "#f38ba8" : (percent > 60 ? "#f9e2af" : Theme.accent)
+    readonly property color levelColor: percent > 85 ? Theme.error : (percent > 60 ? Theme.warning : Theme.accent)
 
     height: showGraph ? 84 : 42
 

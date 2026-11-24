@@ -1,25 +1,169 @@
 #!/usr/bin/env bash
-set -e
-file="$HOME/.config/themes/$1.json"
-[ -f "$file" ] || { echo "Нет такой темы: $1"; exit 1; }
+# set-theme — одна палитра из ~/.config/themes/<name>.json на все компоненты:
+#   quickshell, kitty, hyprland, yazi, zed (+ zsh/fastfetch через ANSI)
+#
+# Шаблоны: ~/.config/themes/templates/{flavor.toml.tpl,tmtheme.xml.tpl,zed-theme.json.tpl}
+# Переменные: ZED_ALPHA (по умолчанию cc = 80%), YAZI_FLAVOR (по умолчанию ark)
+set -euo pipefail
 
-# 1. Quickshell (панель, меню): он следит за этим файлом и обновляется сам
-cp "$file" ~/.config/quickshell/theme.json
+name="${1:-}"
+[[ -n "$name" ]] || { echo "usage: set-theme <name>" >&2; exit 2; }
 
-# 2. Терминал kitty
+cfg="${XDG_CONFIG_HOME:-$HOME/.config}"
+themes="$cfg/themes"
+tpl="$themes/templates"
+src="$themes/${name%.json}.json"
+
+die() { echo "set-theme: $*" >&2; exit 1; }
+
+[[ -f "$src" ]] || die "нет темы: $src"
+command -v jq >/dev/null || die "нужен jq"
+jq -e . "$src" >/dev/null || die "битый JSON: $src"
+
+get() { jq -r "$1" "$P_SRC"; }
+opt() { jq -r --arg k "$1" '.[$k] // empty' "$P_SRC"; }
+ansi(){ jq -r ".ansi[$1]" "$P_SRC"; }
+pick(){ if [[ -n "$1" ]]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
+
+ZED_ALPHA="${ZED_ALPHA:-cc}"
+YAZI_FLAVOR="${YAZI_FLAVOR:-ark}"
+
+load_palette() {
+  P_SRC="$1"
+  BG=$(get '.bg'); SURFACE=$(get '.surface'); FG=$(get '.fg')
+  ACCENT=$(get '.accent'); MUTED=$(get '.muted')
+  TITLE=$(pick "$(opt name)" "$(basename "$P_SRC" .json)")
+
+  A=()
+  local i
+  for i in $(seq 0 15); do A[$i]=$(ansi "$i"); done
+
+  ORANGE=$(pick      "$(opt orange)"      "${A[11]}")
+  TEAL=$(pick        "$(opt teal)"        "${A[6]}")
+  TYPE=$(pick        "$(opt type)"        "$TEAL")
+  OPERATOR=$(pick    "$(opt operator)"    "$TEAL")
+  CYAN_DARK=$(pick   "$(opt cyan_dark)"   "${A[6]}")
+  BORDER_DARK=$(pick "$(opt border_dark)" "${A[0]}")
+  HIGHLIGHT=$(pick   "$(opt highlight)"   "${A[8]}")
+  ELEVATED=$(pick    "$(opt elevated)"    "$BG")
+  BG2=$(pick         "$(opt bg2)"         "$SURFACE")
+  BG3=$(pick         "$(opt bg3)"         "$SURFACE")
+  MUTED2=$(pick      "$(opt muted2)"      "$MUTED")
+  ZED_BG="${BG}${ZED_ALPHA}"
+}
+
+render() {
+  local tplfile="$1" dest="$2"
+  if [[ ! -f "$tplfile" ]]; then
+    echo "set-theme: нет шаблона $tplfile (пропуск)" >&2
+    return 0
+  fi
+  local args=(
+    -e "s|@TITLE@|$TITLE|g"
+    -e "s|@ZED_BG@|$ZED_BG|g"
+    -e "s|@BG@|$BG|g"
+    -e "s|@SURFACE@|$SURFACE|g"
+    -e "s|@FG@|$FG|g"
+    -e "s|@ACCENT@|$ACCENT|g"
+    -e "s|@MUTED@|$MUTED|g"
+    -e "s|@MUTED2@|$MUTED2|g"
+    -e "s|@ORANGE@|$ORANGE|g"
+    -e "s|@TEAL@|$TEAL|g"
+    -e "s|@TYPE@|$TYPE|g"
+    -e "s|@CYAN_DARK@|$CYAN_DARK|g"
+    -e "s|@OPERATOR@|$OPERATOR|g"
+    -e "s|@BORDER_DARK@|$BORDER_DARK|g"
+    -e "s|@HIGHLIGHT@|$HIGHLIGHT|g"
+    -e "s|@ELEVATED@|$ELEVATED|g"
+    -e "s|@BG2@|$BG2|g"
+    -e "s|@BG3@|$BG3|g"
+  )
+  local i
+  for i in $(seq 0 15); do args+=(-e "s|@ANSI$i@|${A[$i]}|g"); done
+  mkdir -p "$(dirname "$dest")"
+  sed "${args[@]}" "$tplfile" > "$dest"
+}
+
+load_palette "$src"
+
+# ---------- 1. Quickshell (следит за файлом, перезапуск не нужен) ----------
+mkdir -p "$cfg/quickshell"
+cp "$src" "$cfg/quickshell/theme.json"
+
+# ---------- 2. kitty (перечитывает конфиг по SIGUSR1) ----------
+mkdir -p "$cfg/kitty"
 {
-  jq -r '"background \(.bg)\nforeground \(.fg)\ncursor \(.accent)\nselection_background \(.accent)\nselection_foreground \(.bg)"' "$file"
-  jq -r '.ansi | to_entries[] | "color\(.key) \(.value)"' "$file"
-} > ~/.config/kitty/theme.conf
-pkill -USR1 kitty || true     # сигнал «перечитай конфиг»
+  printf 'background %s\n' "$BG"
+  printf 'foreground %s\n' "$FG"
+  printf 'cursor %s\n' "$ACCENT"
+  printf 'selection_background %s\n' "$ACCENT"
+  printf 'selection_foreground %s\n' "$BG"
+  local_i=0
+  for local_i in $(seq 0 15); do printf 'color%d %s\n' "$local_i" "${A[$local_i]}"; done
+} > "$cfg/kitty/theme.conf"
+command -v pkill >/dev/null 2>&1 && pkill -USR1 kitty 2>/dev/null || true
 
-# 3. Рамки окон Hyprland
-a=$(jq -r '.accent' "$file" | tr -d '#')
-m=$(jq -r '.muted'  "$file" | tr -d '#')
-cat > ~/.config/hypr/colors.lua <<EOF
+# ---------- 3. Hyprland (live, благодаря dofile в hyprland.lua) ----------
+mkdir -p "$cfg/hypr"
+a="${ACCENT#\#}"; m="${MUTED#\#}"
+cat > "$cfg/hypr/colors.lua" <<EOF
 return {
   active = "rgba(${a}ff)",
   inactive = "rgba(${m}aa)",
 }
 EOF
-hyprctl reload
+command -v hyprctl >/dev/null 2>&1 && hyprctl reload >/dev/null 2>&1 || true
+
+# ---------- 4. yazi (флейвор + указатель в theme.toml) ----------
+mkdir -p "$cfg/yazi/flavors/$YAZI_FLAVOR.yazi"
+render "$tpl/flavor.toml.tpl"  "$cfg/yazi/flavors/$YAZI_FLAVOR.yazi/flavor.toml"
+render "$tpl/tmtheme.xml.tpl"  "$cfg/yazi/flavors/$YAZI_FLAVOR.yazi/tmtheme.xml"
+
+yazi_theme="$cfg/yazi/theme.toml"
+mkdir -p "$(dirname "$yazi_theme")"
+if [[ -f "$yazi_theme" ]] && grep -q '^\[flavor\]' "$yazi_theme"; then
+  if grep -qE '^use[[:space:]]*=' "$yazi_theme"; then
+    sed -i -E "s|^use[[:space:]]*=.*|use = \"$YAZI_FLAVOR\"|" "$yazi_theme"
+  else
+    sed -i "/^\[flavor\]/a use = \"$YAZI_FLAVOR\"" "$yazi_theme"
+  fi
+  if grep -qE '^dark[[:space:]]*=' "$yazi_theme"; then
+    sed -i -E "s|^dark[[:space:]]*=.*|dark = \"$YAZI_FLAVOR\"|" "$yazi_theme"
+  else
+    sed -i "/^\[flavor\]/a dark = \"$YAZI_FLAVOR\"" "$yazi_theme"
+  fi
+else
+  printf '\n[flavor]\nuse = "%s"\ndark = "%s"\n' "$YAZI_FLAVOR" "$YAZI_FLAVOR" >> "$yazi_theme"
+fi
+
+# ---------- 5. Zed: темы для ВСЕХ палитр + выбор активной ----------
+zed_dir="$cfg/zed/themes"
+mkdir -p "$zed_dir"
+for f in "$themes"/*.json; do
+  [[ "$f" == "$themes/templates" ]] && continue
+  base="$(basename "$f" .json)"
+  load_palette "$f"
+  render "$tpl/zed-theme.json.tpl" "$zed_dir/ark-$base.json"
+done
+
+load_palette "$src"
+zed_name="Ark $TITLE"
+zed_settings="$cfg/zed/settings.json"
+mkdir -p "$(dirname "$zed_settings")"
+if [[ -f "$zed_settings" ]] && grep -qE '"theme"[[:space:]]*:' "$zed_settings"; then
+  sed -i -E "s|(\"theme\"[[:space:]]*:[[:space:]]*\")[^\"]*(\")|\1${zed_name}\2|" "$zed_settings"
+elif [[ -f "$zed_settings" ]]; then
+  tmp="$(mktemp)"
+  awk -v t="$zed_name" '{ print } !done && /\{/ { printf "  \"theme\": \"%s\",\n", t; done=1 }' "$zed_settings" > "$tmp"
+  mv "$tmp" "$zed_settings"
+else
+  printf '{\n  "theme": "%s"\n}\n' "$zed_name" > "$zed_settings"
+fi
+
+echo "Тема применена: $TITLE"
+echo "  quickshell  — live (theme.json)"
+echo "  kitty       — live (SIGUSR1)"
+echo "  hyprland    — live (hyprctl reload)"
+echo "  zed         — live (\"$zed_name\")"
+echo "  yazi        — перезапусти yazi"
+echo "  zsh / fastfetch — через ANSI, само"

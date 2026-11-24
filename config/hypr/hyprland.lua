@@ -91,7 +91,7 @@ hl.env("HYPRCURSOR_SIZE", "24")
 -----------------------
 
 -- Цвета из текущей темы (файл создаёт скрипт set-theme)
-local colors = require("colors")
+local colors = dofile(os.getenv("HOME") .. "/.config/hypr/colors.lua")
 
 -- Refer to https://wiki.hypr.land/configuring/core/config-options/
 hl.config({
