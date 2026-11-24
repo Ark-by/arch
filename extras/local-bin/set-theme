@@ -49,6 +49,9 @@ load_palette() {
   BG2=$(pick         "$(opt bg2)"         "$SURFACE")
   BG3=$(pick         "$(opt bg3)"         "$SURFACE")
   MUTED2=$(pick      "$(opt muted2)"      "$MUTED")
+  CURSOR=$(pick      "$(opt cursor)"       "$ACCENT")
+  SEL_BG=$(pick      "$(opt selection)"    "$ACCENT")
+  SEL_FG=$(pick      "$(opt selection_fg)" "$BG")
   ZED_BG="${BG}${ZED_ALPHA}"
 }
 
@@ -95,9 +98,9 @@ mkdir -p "$cfg/kitty"
 {
   printf 'background %s\n' "$BG"
   printf 'foreground %s\n' "$FG"
-  printf 'cursor %s\n' "$ACCENT"
-  printf 'selection_background %s\n' "$ACCENT"
-  printf 'selection_foreground %s\n' "$BG"
+  printf 'cursor %s\n' "$CURSOR"
+  printf 'selection_background %s\n' "$SEL_BG"
+  printf 'selection_foreground %s\n' "$SEL_FG"
   local_i=0
   for local_i in $(seq 0 15); do printf 'color%d %s\n' "$local_i" "${A[$local_i]}"; done
 } > "$cfg/kitty/theme.conf"
