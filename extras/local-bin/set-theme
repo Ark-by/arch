@@ -53,6 +53,13 @@ load_palette() {
   SEL_BG=$(pick      "$(opt selection)"    "$ACCENT")
   SEL_FG=$(pick      "$(opt selection_fg)" "$BG")
   ZED_BG="${BG}${ZED_ALPHA}"
+  # hex без # — формат hyprlock/hyprlogin
+  BG8=${BG#\#}; SURFACE8=${SURFACE#\#}; FG8=${FG#\#}; MUTED8=${MUTED#\#}
+  ACCENT8=${ACCENT#\#}
+  PURPLE8=$(printf '%s' "${A[5]}" | tr -d '#')
+  GREEN8=$(printf '%s' "${A[2]}" | tr -d '#')
+  RED8=$(printf '%s' "${A[1]}" | tr -d '#')
+  CYAN8=$(printf '%s' "${A[6]}" | tr -d '#')
 }
 
 render() {
@@ -80,6 +87,15 @@ render() {
     -e "s|@ELEVATED@|$ELEVATED|g"
     -e "s|@BG2@|$BG2|g"
     -e "s|@BG3@|$BG3|g"
+    -e "s|@BG8@|$BG8|g"
+    -e "s|@SURFACE8@|$SURFACE8|g"
+    -e "s|@FG8@|$FG8|g"
+    -e "s|@MUTED8@|$MUTED8|g"
+    -e "s|@ACCENT8@|$ACCENT8|g"
+    -e "s|@PURPLE8@|$PURPLE8|g"
+    -e "s|@GREEN8@|$GREEN8|g"
+    -e "s|@RED8@|$RED8|g"
+    -e "s|@CYAN8@|$CYAN8|g"
   )
   local i
   for i in $(seq 0 15); do args+=(-e "s|@ANSI$i@|${A[$i]}|g"); done
@@ -139,6 +155,26 @@ else
   printf '\n[flavor]\nuse = "%s"\ndark = "%s"\n' "$YAZI_FLAVOR" "$YAZI_FLAVOR" >> "$yazi_theme"
 fi
 
+# ---------- 4.5 hyprlogin (экран входа) ----------
+hyprlogin_stage="$cfg/hyprlogin/hyprlogin.conf"
+render "$tpl/hyprlogin.conf.tpl" "$hyprlogin_stage"
+if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+  install -Dm644 "$hyprlogin_stage" /etc/hyprlogin/hyprlogin.conf
+  echo "  hyprlogin  — установлен в /etc/hyprlogin"
+else
+  echo "  hyprlogin  — обновлён $hyprlogin_stage"
+  echo "               применить: sudo install -Dm644 $hyprlogin_stage /etc/hyprlogin/hyprlogin.conf"
+  if [[ -f "$cfg/hyprlogin/autoapply" ]] && command -v pkexec >/dev/null 2>&1; then
+    if pkexec install -Dm644 "$hyprlogin_stage" /etc/hyprlogin/hyprlogin.conf; then
+      echo "               применено автоматически (pkexec)"
+    else
+      echo "               pkexec отменён — выполни команду вручную"
+    fi
+  elif command -v notify-send >/dev/null 2>&1; then
+    notify-send -a "set-theme" -u low "hyprlogin: тема обновлена" \
+      "Экран входа применится после: sudo install -Dm644 $hyprlogin_stage /etc/hyprlogin/hyprlogin.conf"
+  fi
+fi
 # ---------- 5. Zed: темы для ВСЕХ палитр + выбор активной ----------
 zed_dir="$cfg/zed/themes"
 mkdir -p "$zed_dir"

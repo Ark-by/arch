@@ -9,6 +9,7 @@ efibootmgr
 fastfetch
 firefox
 git
+greetd
 gst-plugin-pipewire
 hyprland
 hyprpolkitagent
@@ -17,7 +18,6 @@ kitty
 libpulse
 linux
 linux-firmware
-ly
 mkinitcpio
 nano
 noto-fonts

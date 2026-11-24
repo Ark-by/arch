@@ -14,7 +14,7 @@
 #         extras/etc/**                 -> /etc/**               (sudo)
 #         extras/Programs/*             -> ~/Programs/
 #         extras/udev/*.rules           -> /etc/udev/rules.d/    (sudo, если есть)
-#    6. включает Ly как менеджер входа (ly@tty2 + getty@tty2);
+#    6. включает greetd + hyprlogin как экран входа (vt1);
 #    7. проверяет shell, fastfetch, Firefox policies, команды Hyprland;
 #    8. печатает отчёт: сделано / предупреждения / требует рук.
 #
@@ -35,7 +35,7 @@ DO_PACKAGES=1
 DO_AUR=1
 DO_CONFIG=1
 DO_EXTRAS=1
-DO_LY=1
+DO_GREETER=1
 DO_RUSTDESK=1
 DRY_RUN=0
 ASSUME_YES=0
@@ -82,7 +82,7 @@ usage() {
   --no-aur         не ставить AUR-пакеты из aur.txt
   --no-config      не восстанавливать config/ в ~/.config
   --no-extras      не разворачивать extras/
-  --no-ly          не включать Ly
+  --no-ly          не настраивать менеджер входа (greetd + hyprlogin)
   --no-rustdesk    не настраивать RustDesk (uinput, портал)
   -h, --help       эта справка
 
@@ -99,7 +99,7 @@ while (($#)); do
         --no-aur)      DO_AUR=0 ;;
         --no-config)   DO_CONFIG=0 ;;
         --no-extras)   DO_EXTRAS=0 ;;
-        --no-ly)       DO_LY=0 ;;
+        --no-ly)       DO_GREETER=0 ;;
         --no-rustdesk) DO_RUSTDESK=0 ;;
         -h|--help)     usage; exit 0 ;;
         *)             die "Неизвестная опция: $1 (см. --help)" ;;
@@ -174,7 +174,7 @@ info "Пакетов из репозиториев: ${#NATIVE_REQUESTED[@]}"
 (( DO_AUR ))    && info "AUR-пакетов: ${#AUR_TO_INSTALL[@]}"
 (( DO_CONFIG )) && info "Конфиги: $CONFIG_SOURCE -> $HOME/.config"
 (( DO_EXTRAS )) && { [[ -d "$EXTRAS_DIR" ]] && info "extras/: найдена" || info "extras/: отсутствует"; }
-(( DO_LY ))     && info "Менеджер входа: Ly на tty2"
+(( DO_GREETER )) && info "Менеджер входа: greetd + hyprlogin (vt1)"
 
 if (( DRY_RUN )); then
     section "Пакеты из репозиториев"
@@ -474,45 +474,50 @@ if (( DO_EXTRAS )); then
 fi
 
 # =============================================================================
-# 5. Менеджер входа: Ly
+# 5. Менеджер входа: greetd + hyprlogin
 # =============================================================================
-enable_ly() {
-    command -v systemctl >/dev/null 2>&1 || { manual "systemctl не найден — Ly не настроен."; return 0; }
-    pacman -Q ly >/dev/null 2>&1 || { manual "Пакет ly не установлен — менеджер входа не настроен."; return 0; }
+setup_greetd() {
+    command -v systemctl >/dev/null 2>&1 || { manual "systemctl не найден — greetd не настроен."; return 0; }
+    pacman -Q greetd >/dev/null 2>&1 || { manual "Пакет greetd не установлен — менеджер входа не настроен."; return 0; }
+    pacman -Q hyprlogin >/dev/null 2>&1 || manual "AUR-пакет hyprlogin не установлен — экран входа не заработает:
+    yay -S hyprlogin"
 
-    local dm_conflict=""
-    [[ -e /etc/systemd/system/display-manager.service ]] && dm_conflict="display-manager.service"
-    systemctl is-active --quiet display-manager.service 2>/dev/null && \
-        dm_conflict="${dm_conflict:+$dm_conflict, }активный DM"
-
-    if [[ -n "$dm_conflict" ]]; then
-        manual "Уже настроен другой менеджер входа ($dm_conflict). Отключите его и включите Ly:
-    sudo systemctl enable ly@tty2.service
-    sudo systemctl disable getty@tty2.service"
+    local cfg=/etc/greetd/config.toml
+    if [[ ! -f "$cfg" ]]; then
+        manual "Нет $cfg — скопируйте extras/etc/greetd/config.toml вручную."
         return 0
     fi
 
-    if ! confirm "Включить Ly как экран входа на tty2?"; then
-        warned "Ly установлен, но не включён."
-        return 0
+    if systemctl is-enabled --quiet ly@tty2.service 2>/dev/null; then
+        if $SUDO systemctl disable ly@tty2.service; then
+            ok "ly@tty2 отключён."
+        else
+            warned "не удалось отключить ly@tty2."
+        fi
     fi
 
-    if ! $SUDO systemctl enable ly@tty2.service; then
-        manual "Не удалось включить ly@tty2.service."
-        return 0
-    fi
-
-    if $SUDO systemctl disable getty@tty2.service; then
-        ok "Ly включён на tty2, getty@tty2 отключён."
+    if $SUDO systemctl enable greetd.service; then
+        ok "greetd включён (hyprlogin на vt1)."
     else
-        $SUDO systemctl disable ly@tty2.service || true
-        manual "getty@tty2 не отключился — включение Ly отменено."
+        manual "Не удалось включить greetd.service."
+    fi
+
+    if id greeter >/dev/null 2>&1; then
+        if $SUDO usermod -aG video,input greeter 2>/dev/null; then
+            ok "greeter добавлен в группы video,input."
+        else
+            warned "не удалось изменить группы greeter."
+        fi
+    fi
+
+    if systemctl is-active --quiet display-manager.service 2>/dev/null; then
+        warned "display-manager.service ещё активен — greetd применится после перезагрузки."
     fi
 }
 
-if (( DO_LY )); then
-    section "Менеджер входа (Ly)"
-    enable_ly
+if (( DO_GREETER )); then
+    section "Менеджер входа (greetd + hyprlogin)"
+    setup_greetd
 fi
 
 # =============================================================================
@@ -715,7 +720,7 @@ cat <<'NEXT'
 
 Дальше:
   1. Перезагрузитесь.
-  2. На экране Ly выберите сессию Hyprland и войдите.
+  2. На экране hyprlogin выберите сессию Hyprland и войдите.
   3. Откройте терминал — должен появиться fastfetch.
   4. Панель: qs (если не запущена). Обои: Super+W. Темы: Super+T.
   5. Firefox: закладки появятся в новом профиле; в существующем проверьте about:policies.

@@ -1,0 +1,7 @@
+# greetd + hyprlogin (экран входа Hyprland)
+[terminal]
+vt = 1
+
+[default_session]
+command = "start-hyprland -- --config /etc/hyprlogin/hyprland-greeter.lua"
+user = "greeter"

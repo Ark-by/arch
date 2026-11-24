@@ -58,10 +58,14 @@ grep '"theme"' ~/.config/zed/settings.json
 - В терминале без палитры kitty (tty) zsh/fastfetch будут в стандартных ANSI-цветах.
 - `tmtheme.xml` для превью yazi: ~40 цветов параметризованы, ~20 редких — статичны.
 - Темы-палитры (`dracula`, `nord`, …) — самостоятельные источники; правишь их — меняется всё.
-## Обновление 2026-11-24
+## Экран входа (hyprlogin)
 
-- палитры могут задавать `cursor`, `selection`, `selection_fg` (иначе берутся `accent`/`bg`);
-- тем стало 10 (`ark-adventuretime.json` и остальные);
-- Zed не требует перезапуска при переключении между уже известными темами
-  (он следит за `settings.json`), но новый файл палитры он увидит только после рестарта;
-- yazi перезапускается всегда — live-reload у него нет.
+- `extras/etc/hyprlogin/hyprlogin.conf` — тема гретера в стиле палитры
+  (фон `bg`, поле ввода `surface` + градиент `accent`→`purple`, часы `fg`, дата `muted`);
+- `extras/etc/hyprlogin/hyprland-greeter.lua` — сессия гретера с раскладкой `us,ru`;
+- `extras/etc/greetd/config.toml` — greetd запускает её на vt1;
+- `set-theme` рендерит `~/.config/hyprlogin/hyprlogin.conf` и печатает команду
+  `sudo install -Dm644 ... /etc/hyprlogin/hyprlogin.conf` (под root ставит сам).
+
+Обои в гретере: greeter не читает `~`, поэтому либо цвет фона из палитры,
+либо файл в `/usr/share/backgrounds/` и раскомментированный `path`.

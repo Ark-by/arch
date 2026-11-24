@@ -1,3 +1,4 @@
 cloudflare-warp-bin
 rustdesk-bin
 yay
+hyprlogin
