@@ -4,7 +4,6 @@
     "type": "kitty-direct",
     "source": "~/.config/fastfetch/assets/logo2.png",
     "width": 40,
-    "height": 27,
   },
   "display": {
     "color": "cyan",
