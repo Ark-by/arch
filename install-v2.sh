@@ -466,6 +466,38 @@ restore_extras() {
     else
         manual "extras/Programs пуст — MouseBattery (виджет батареи) не восстановлен."
     fi
+    # 4.6 ~/ из extras/home — обои и прочие файлы
+    if [[ -d "$EXTRAS_DIR/home" ]]; then
+        local home_src="$EXTRAS_DIR/home/$USER"
+        if [[ ! -d "$home_src" ]]; then
+            home_src="$(find "$EXTRAS_DIR/home" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -n1)"
+            if [[ -n "$home_src" ]]; then
+                warned "extras/home: использую $(basename "$home_src") вместо пользователя $USER"
+            fi
+        fi
+        if [[ -n "$home_src" && -d "$home_src" ]]; then
+            while IFS= read -r -d '' rel; do
+                rel="${rel#./}"
+                mkdir -p "$HOME/$(dirname "$rel")"
+                cp -a -- "$home_src/$rel" "$HOME/$rel"
+            done < <(cd "$home_src" && find . -type f -print0)
+            ok "Восстановлены файлы из extras/home (обои и т.п.)"
+        fi
+    fi
+
+    # 4.7 обои по умолчанию, если wallpaper.txt пуст
+    mkdir -p "$HOME/Pictures/Wallpapers"
+    WALLPAPER_FILE="$HOME/.config/quickshell/wallpaper.txt"
+    if [[ -f "$WALLPAPER_FILE" && -z "$(tr -d '\r\n' < "$WALLPAPER_FILE")" ]]; then
+        local wp
+        wp="$(find "$HOME/Pictures" -type f \
+            \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \) \
+            -print -quit 2>/dev/null || true)"
+        if [[ -n "$wp" ]]; then
+            printf '%s' "$wp" > "$WALLPAPER_FILE"
+            ok "Обои по умолчанию: $wp"
+        fi
+    fi
 }
 
 if (( DO_EXTRAS )); then
