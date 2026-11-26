@@ -80,7 +80,6 @@ Item {
         if (downloadProc.running)
             return
         page.status = "Downloading page " + page.pageNumber + "…"
-        downloadOut.text = ""
         const src = ("" + Settings.get("wallpaper.sourceUrl", "")).trim()
         const cmd = ["bash", page.home + "/.local/bin/wallhaven-download.sh", page.pageNumber]
         if (src !== "")
