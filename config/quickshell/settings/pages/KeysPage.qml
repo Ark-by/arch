@@ -635,51 +635,59 @@ Item {
                     topPadding: 4
                 }
 
-                Rectangle {
+                Row {
                     width: col.width
-                    height: 28
-                    radius: 7
-                    color: Qt.alpha(Theme.surface, 0.7)
-                    border.color: appNewAction.activeFocus ? Theme.accent : Theme.border
-                    border.width: 1
+                    spacing: 6
 
-                    TextInput {
-                        id: appNewAction
-                        anchors.fill: parent
-                        anchors.margins: 7
-                        verticalAlignment: TextInput.AlignVCenter
-                        color: Theme.fg
-                        font.pixelSize: 11
-                        font.family: "JetBrainsMono Nerd Font"
-                        text: page.appAction
-                        selectByMouse: true
-                        clip: true
-                        onTextEdited: page.appAction = text
-                        onAccepted: page.addApp()
-                    }
-                }
+                    Rectangle {
+                        width: parent.width - 36
+                        height: 28
+                        radius: 7
+                        color: Qt.alpha(Theme.surface, 0.7)
+                        border.color: appNewAction.activeFocus ? Theme.accent : Theme.border
+                        border.width: 1
 
-                Rectangle {
-                    width: 130
-                    height: 28
-                    radius: 7
-                    color: pickNewMouse.containsMouse ? Theme.surface : "transparent"
-                    border.color: Theme.border
-                    border.width: 1
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "Pick from list"
-                        color: Theme.fg
-                        font.pixelSize: 11
+                        TextInput {
+                            id: appNewAction
+                            anchors.fill: parent
+                            anchors.margins: 7
+                            verticalAlignment: TextInput.AlignVCenter
+                            color: Theme.fg
+                            font.pixelSize: 11
+                            font.family: "JetBrainsMono Nerd Font"
+                            text: page.appAction
+                            selectByMouse: true
+                            clip: true
+                            onTextEdited: page.appAction = text
+                            onAccepted: page.addApp()
+                        }
                     }
 
-                    MouseArea {
-                        id: pickNewMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: page.pickingIndex = -2
+                    Rectangle {
+                        width: 30
+                        height: 28
+                        radius: 7
+                        color: pickNewMouse.containsMouse ? Qt.alpha(Theme.accent, 0.25) : Qt.alpha(Theme.surface, 0.7)
+                        border.color: Theme.border
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "▾"
+                            color: Theme.accent
+                            font.pixelSize: 12
+                        }
+
+                        MouseArea {
+                            id: pickNewMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                page.pickingField = "action"
+                                page.pickingIndex = -2
+                            }
+                        }
                     }
                 }
             }
