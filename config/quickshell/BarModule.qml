@@ -78,9 +78,9 @@ Item {
         Text {
             text: "CPU " + ("" + Math.round(SysInfo.cpu)).padStart(3, "") + "% RAM " + ("" + Math.round(SysInfo.memPct)).padStart(3, "") + "%"
             color: Theme.accent
-            font.pixelSize: 13
+            font.pixelSize: Settings.get("fonts.ui_size", 14) - 1
             font.bold: true
-            font.family: "JetBrainsMono Nerd Font"
+            font.family: Settings.get("fonts.ui_family", "JetBrainsMono Nerd Font")
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
@@ -105,7 +105,7 @@ Item {
                 text: Qt.locale("ru_RU").toString(clock.date, "dddd d MMMM  HH:mm")
                     .replace(/(^|\s)(\S)/g, (m, a, b) => a + b.toUpperCase())
                 color: Theme.accent
-                font.pixelSize: 14
+                font.pixelSize: Settings.get("fonts.ui_size", 14)
                 font.bold: true
             }
         }
@@ -155,7 +155,7 @@ Item {
         id: kblayoutComp
         IconButton {
             text: KbLayout.code
-            font.pixelSize: 15
+            font.pixelSize: Settings.get("fonts.ui_size", 14) + 1
             font.bold: true
             baseColor: Theme.accent
             hoverColor: Theme.fg

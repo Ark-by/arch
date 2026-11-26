@@ -7,8 +7,8 @@ Text {
     property color baseColor: Theme.fg
     property color hoverColor: Theme.accent
 
-    font.family: "JetBrainsMono Nerd Font"
-    font.pixelSize: 18
+    font.family: Settings.get("fonts.ui_family", "JetBrainsMono Nerd Font")
+    font.pixelSize: Settings.get("fonts.ui_size", 14) + 4
     color: ma.containsMouse ? hoverColor : baseColor
 
     MouseArea {
