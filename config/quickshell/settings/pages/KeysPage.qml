@@ -15,6 +15,13 @@ Item {
     property int pickingIndex: -1
     property string pickingField: "action"
     property bool pickerOpen: false
+    property int zedPickingRow: -1
+    property bool zedPickerOpen: false
+    property string zedNewContext: "Global"
+    property string zedNewKey: ""
+    property string zedNewAction: ""
+    property string yaziNewOn: ""
+    property string yaziNewRun: ""
     property string newContext: "common"
 
     readonly property var tabs: [
@@ -138,7 +145,6 @@ Item {
     }
 
     Flickable {
-        visible: !page.isExtra()
         anchors.fill: parent
         contentWidth: width
         contentHeight: col.implicitHeight + 36
@@ -790,13 +796,630 @@ Item {
                     }
                 }
             }
+
+            // ---------- zed ----------
+            Column {
+                width: col.width
+                visible: page.tab === "zed"
+                spacing: 2
+
+                Text {
+                    width: parent.width
+                    text: ZedKeys.status
+                    color: Theme.muted
+                    font.pixelSize: 11
+                    bottomPadding: 4
+                }
+
+                Repeater {
+                    model: ZedKeys.entries
+
+                    Rectangle {
+                        required property var modelData
+                        required property int index
+
+                        width: col.width
+                        height: 58
+                        radius: 8
+                        color: Qt.alpha(Theme.surface, 0.4)
+                        border.color: Theme.border
+                        border.width: 1
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.top: parent.top
+                            anchors.topMargin: 5
+                            text: modelData.context === "" ? "Global" : modelData.context
+                            color: Theme.muted
+                            font.pixelSize: 10
+                        }
+
+                        Rectangle {
+                            id: zKey
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.top: parent.top
+                            anchors.topMargin: 22
+                            width: 170
+                            height: 26
+                            radius: 6
+                            color: Qt.alpha(Theme.bg, 0.6)
+                            border.color: zKeyInput.activeFocus ? Theme.accent : Theme.border
+                            border.width: 1
+
+                            TextInput {
+                                id: zKeyInput
+                                anchors.fill: parent
+                                anchors.margins: 6
+                                verticalAlignment: TextInput.AlignVCenter
+                                color: Theme.fg
+                                font.pixelSize: 11
+                                font.family: "JetBrainsMono Nerd Font"
+                                text: modelData.key
+                                selectByMouse: true
+                                clip: true
+                                onEditingFinished: ZedKeys.setKey(modelData.section, modelData.key, text)
+                            }
+                        }
+
+                        Rectangle {
+                            id: zAction
+                            anchors.left: zKey.right
+                            anchors.leftMargin: 6
+                            anchors.right: zPicker.left
+                            anchors.rightMargin: 6
+                            anchors.top: zKey.top
+                            height: 26
+                            radius: 6
+                            color: Qt.alpha(Theme.bg, 0.6)
+                            border.color: zActionInput.activeFocus ? Theme.accent : Theme.border
+                            border.width: 1
+
+                            TextInput {
+                                id: zActionInput
+                                anchors.fill: parent
+                                anchors.margins: 6
+                                verticalAlignment: TextInput.AlignVCenter
+                                color: Theme.fg
+                                font.pixelSize: 11
+                                font.family: "JetBrainsMono Nerd Font"
+                                text: modelData.action
+                                selectByMouse: true
+                                clip: true
+                                onEditingFinished: ZedKeys.setAction(modelData.section, modelData.key, text)
+                            }
+                        }
+
+                        Rectangle {
+                            id: zPicker
+                            anchors.right: zRemove.left
+                            anchors.rightMargin: 6
+                            anchors.top: zKey.top
+                            width: 26
+                            height: 26
+                            radius: 6
+                            color: zPickerMouse.containsMouse ? Qt.alpha(Theme.accent, 0.25) : Qt.alpha(Theme.bg, 0.6)
+                            border.color: Theme.border
+                            border.width: 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "▾"
+                                color: Theme.accent
+                                font.pixelSize: 12
+                            }
+
+                            MouseArea {
+                                id: zPickerMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    page.zedPickingRow = index
+                                    page.zedPickerOpen = true
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            id: zRemove
+                            anchors.right: parent.right
+                            anchors.rightMargin: 8
+                            anchors.top: zKey.top
+                            width: 26
+                            height: 26
+                            radius: 6
+                            color: zRemoveMouse.containsMouse ? Qt.alpha(Theme.error, 0.25) : "transparent"
+                            border.color: Theme.border
+                            border.width: 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "×"
+                                color: Theme.error
+                                font.pixelSize: 13
+                            }
+
+                            MouseArea {
+                                id: zRemoveMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: ZedKeys.remove(modelData.section, modelData.key)
+                            }
+                        }
+                    }
+                }
+
+                Item { width: 1; height: 12 }
+
+                Text {
+                    text: "Add a Zed binding"
+                    color: Theme.accent
+                    font.pixelSize: 14
+                    font.bold: true
+                    bottomPadding: 4
+                }
+
+                FontSelect {
+                    width: col.width
+                    label: "Context"
+                    value: page.zedNewContext
+                    families: ZedKeys.contexts()
+                    onSelected: (v) => page.zedNewContext = v
+                }
+
+                Text {
+                    text: "Key"
+                    color: Theme.fg
+                    font.pixelSize: 12
+                    topPadding: 4
+                }
+
+                Rectangle {
+                    width: col.width
+                    height: 28
+                    radius: 7
+                    color: Qt.alpha(Theme.surface, 0.7)
+                    border.color: zNewKeyInput.activeFocus ? Theme.accent : Theme.border
+                    border.width: 1
+
+                    TextInput {
+                        id: zNewKeyInput
+                        anchors.fill: parent
+                        anchors.margins: 7
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: Theme.fg
+                        font.pixelSize: 11
+                        font.family: "JetBrainsMono Nerd Font"
+                        text: page.zedNewKey
+                        selectByMouse: true
+                        clip: true
+                        onTextEdited: page.zedNewKey = text
+                    }
+                }
+
+                Text {
+                    text: "Action"
+                    color: Theme.fg
+                    font.pixelSize: 12
+                    topPadding: 4
+                }
+
+                Row {
+                    width: col.width
+                    spacing: 6
+
+                    Rectangle {
+                        width: parent.width - 36
+                        height: 28
+                        radius: 7
+                        color: Qt.alpha(Theme.surface, 0.7)
+                        border.color: zNewActionInput.activeFocus ? Theme.accent : Theme.border
+                        border.width: 1
+
+                        TextInput {
+                            id: zNewActionInput
+                            anchors.fill: parent
+                            anchors.margins: 7
+                            verticalAlignment: TextInput.AlignVCenter
+                            color: Theme.fg
+                            font.pixelSize: 11
+                            font.family: "JetBrainsMono Nerd Font"
+                            text: page.zedNewAction
+                            selectByMouse: true
+                            clip: true
+                            onTextEdited: page.zedNewAction = text
+                        }
+                    }
+
+                    Rectangle {
+                        width: 30
+                        height: 28
+                        radius: 7
+                        color: zNewPicker.containsMouse ? Qt.alpha(Theme.accent, 0.25) : Qt.alpha(Theme.surface, 0.7)
+                        border.color: Theme.border
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "▾"
+                            color: Theme.accent
+                            font.pixelSize: 12
+                        }
+
+                        MouseArea {
+                            id: zNewPicker
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                page.zedPickingRow = -2
+                                page.zedPickerOpen = true
+                            }
+                        }
+                    }
+                }
+
+                Row {
+                    width: col.width
+                    spacing: 8
+                    topPadding: 10
+
+                    Rectangle {
+                        width: 100
+                        height: 30
+                        radius: 8
+                        color: zAddBtn.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Add"
+                            color: Theme.bg
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: zAddBtn
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                ZedKeys.add(page.zedNewContext, page.zedNewKey.trim(), page.zedNewAction.trim())
+                                page.zedNewKey = ""
+                                page.zedNewAction = ""
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 100
+                        height: 30
+                        radius: 8
+                        color: zSaveBtn.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Save"
+                            color: Theme.bg
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: zSaveBtn
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: ZedKeys.save()
+                        }
+                    }
+
+                    Rectangle {
+                        width: 100
+                        height: 30
+                        radius: 8
+                        color: zRevertBtn.containsMouse ? Theme.surface : "transparent"
+                        border.color: Theme.border
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Revert"
+                            color: Theme.fg
+                            font.pixelSize: 11
+                        }
+
+                        MouseArea {
+                            id: zRevertBtn
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: ZedKeys.reload()
+                        }
+                    }
+                }
+            }
+
+            // ---------- yazi ----------
+            Column {
+                width: col.width
+                visible: page.tab === "yazi"
+                spacing: 2
+
+                Text {
+                    width: parent.width
+                    text: YaziKeys.status
+                    color: Theme.muted
+                    font.pixelSize: 11
+                    bottomPadding: 4
+                }
+
+                Repeater {
+                    model: YaziKeys.entries
+
+                    Rectangle {
+                        required property var modelData
+                        required property int index
+
+                        width: col.width
+                        height: 84
+                        radius: 8
+                        color: Qt.alpha(Theme.surface, 0.4)
+                        border.color: Theme.border
+                        border.width: 1
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.top: parent.top
+                            anchors.topMargin: 5
+                            text: "on"
+                            color: Theme.muted
+                            font.pixelSize: 10
+                        }
+
+                        Rectangle {
+                            id: yOn
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.right: yRemove.left
+                            anchors.rightMargin: 8
+                            anchors.top: parent.top
+                            anchors.topMargin: 18
+                            height: 24
+                            radius: 6
+                            color: Qt.alpha(Theme.bg, 0.6)
+                            border.color: yOnInput.activeFocus ? Theme.accent : Theme.border
+                            border.width: 1
+
+                            TextInput {
+                                id: yOnInput
+                                anchors.fill: parent
+                                anchors.margins: 5
+                                verticalAlignment: TextInput.AlignVCenter
+                                color: Theme.fg
+                                font.pixelSize: 11
+                                font.family: "JetBrainsMono Nerd Font"
+                                text: modelData.on
+                                selectByMouse: true
+                                clip: true
+                                onEditingFinished: YaziKeys.setOn(index, text)
+                            }
+                        }
+
+                        Rectangle {
+                            id: yRun
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.right: yRemove.left
+                            anchors.rightMargin: 8
+                            anchors.top: yOn.bottom
+                            anchors.topMargin: 4
+                            height: 24
+                            radius: 6
+                            color: Qt.alpha(Theme.bg, 0.6)
+                            border.color: yRunInput.activeFocus ? Theme.accent : Theme.border
+                            border.width: 1
+
+                            TextInput {
+                                id: yRunInput
+                                anchors.fill: parent
+                                anchors.margins: 5
+                                verticalAlignment: TextInput.AlignVCenter
+                                color: Theme.fg
+                                font.pixelSize: 11
+                                font.family: "JetBrainsMono Nerd Font"
+                                text: modelData.run
+                                selectByMouse: true
+                                clip: true
+                                onEditingFinished: YaziKeys.setRun(index, text)
+                            }
+                        }
+
+                        Rectangle {
+                            id: yRemove
+                            anchors.right: parent.right
+                            anchors.rightMargin: 8
+                            anchors.top: parent.top
+                            anchors.topMargin: 18
+                            width: 26
+                            height: 26
+                            radius: 6
+                            color: yRemoveMouse.containsMouse ? Qt.alpha(Theme.error, 0.25) : "transparent"
+                            border.color: Theme.border
+                            border.width: 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "×"
+                                color: Theme.error
+                                font.pixelSize: 13
+                            }
+
+                            MouseArea {
+                                id: yRemoveMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: YaziKeys.remove(index)
+                            }
+                        }
+                    }
+                }
+
+                Item { width: 1; height: 12 }
+
+                Text {
+                    text: "Add a yazi binding"
+                    color: Theme.accent
+                    font.pixelSize: 14
+                    font.bold: true
+                    bottomPadding: 4
+                }
+
+                Text {
+                    text: "Keys (space separated, e.g. g s)"
+                    color: Theme.fg
+                    font.pixelSize: 12
+                }
+
+                Rectangle {
+                    width: col.width
+                    height: 28
+                    radius: 7
+                    color: Qt.alpha(Theme.surface, 0.7)
+                    border.color: yNewOnInput.activeFocus ? Theme.accent : Theme.border
+                    border.width: 1
+
+                    TextInput {
+                        id: yNewOnInput
+                        anchors.fill: parent
+                        anchors.margins: 7
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: Theme.fg
+                        font.pixelSize: 11
+                        font.family: "JetBrainsMono Nerd Font"
+                        text: page.yaziNewOn
+                        selectByMouse: true
+                        clip: true
+                        onTextEdited: page.yaziNewOn = text
+                    }
+                }
+
+                Text {
+                    text: "Run (yazi command)"
+                    color: Theme.fg
+                    font.pixelSize: 12
+                    topPadding: 4
+                }
+
+                Rectangle {
+                    width: col.width
+                    height: 28
+                    radius: 7
+                    color: Qt.alpha(Theme.surface, 0.7)
+                    border.color: yNewRunInput.activeFocus ? Theme.accent : Theme.border
+                    border.width: 1
+
+                    TextInput {
+                        id: yNewRunInput
+                        anchors.fill: parent
+                        anchors.margins: 7
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: Theme.fg
+                        font.pixelSize: 11
+                        font.family: "JetBrainsMono Nerd Font"
+                        text: page.yaziNewRun
+                        selectByMouse: true
+                        clip: true
+                        onTextEdited: page.yaziNewRun = text
+                    }
+                }
+
+                Row {
+                    width: col.width
+                    spacing: 8
+                    topPadding: 10
+
+                    Rectangle {
+                        width: 100
+                        height: 30
+                        radius: 8
+                        color: yAddBtn.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Add"
+                            color: Theme.bg
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: yAddBtn
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                YaziKeys.add(page.yaziNewOn, page.yaziNewRun, "")
+                                page.yaziNewOn = ""
+                                page.yaziNewRun = ""
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 100
+                        height: 30
+                        radius: 8
+                        color: ySaveBtn.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Save"
+                            color: Theme.bg
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: ySaveBtn
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: YaziKeys.save()
+                        }
+                    }
+
+                    Rectangle {
+                        width: 100
+                        height: 30
+                        radius: 8
+                        color: yRevertBtn.containsMouse ? Theme.surface : "transparent"
+                        border.color: Theme.border
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Revert"
+                            color: Theme.fg
+                            font.pixelSize: 11
+                        }
+
+                        MouseArea {
+                            id: yRevertBtn
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: YaziKeys.reload()
+                        }
+                    }
+                }
+            }
         }
-    }
-    Loader {
-        visible: page.isExtra()
-        active: page.isExtra()
-        anchors.fill: parent
-        source: page.tab === "zed" ? "KeysZedPane.qml" : "KeysYaziPane.qml"
     }
 
     // ---------- выбор действия ----------
@@ -819,6 +1442,38 @@ Item {
         onCancelled: {
             page.pickerOpen = false
             page.pickingIndex = -1
+        }
+    }
+    // ---------- выбор действия для Zed ----------
+    MouseArea {
+        anchors.fill: parent
+        visible: page.zedPickerOpen
+        onClicked: {
+            page.zedPickerOpen = false
+            page.zedPickingRow = -1
+        }
+    }
+
+    ActionPicker {
+        visible: page.zedPickerOpen
+        anchors.centerIn: parent
+        title: "Zed action"
+        items: ZedKeys.actions
+        current: page.zedPickingRow === -2 ? page.zedNewAction
+            : (ZedKeys.entries[page.zedPickingRow] ? ZedKeys.entries[page.zedPickingRow].action : "")
+        onAccepted: (v) => {
+            if (page.zedPickingRow === -2) {
+                page.zedNewAction = v
+            } else if (ZedKeys.entries[page.zedPickingRow]) {
+                ZedKeys.setAction(ZedKeys.entries[page.zedPickingRow].section,
+                                  ZedKeys.entries[page.zedPickingRow].key, v)
+            }
+            page.zedPickerOpen = false
+            page.zedPickingRow = -1
+        }
+        onCancelled: {
+            page.zedPickerOpen = false
+            page.zedPickingRow = -1
         }
     }
 }
