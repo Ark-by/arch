@@ -811,6 +811,16 @@ Item {
                     bottomPadding: 4
                 }
 
+                Text {
+                    visible: ZedKeys.entries.length === 0
+                    width: parent.width
+                    text: "No bindings yet. Choose a context, a key and an action below, press Add, then Save."
+                    color: Theme.muted
+                    font.pixelSize: 11
+                    wrapMode: Text.Wrap
+                    bottomPadding: 6
+                }
+
                 Repeater {
                     model: ZedKeys.entries
 
@@ -1155,6 +1165,16 @@ Item {
                     color: Theme.muted
                     font.pixelSize: 11
                     bottomPadding: 4
+                }
+
+                Text {
+                    visible: YaziKeys.entries.length === 0
+                    width: parent.width
+                    text: "No managed bindings yet. Add on/run below, press Add, then Save — the block is appended to keymap.toml."
+                    color: Theme.muted
+                    font.pixelSize: 11
+                    wrapMode: Text.Wrap
+                    bottomPadding: 6
                 }
 
                 Repeater {

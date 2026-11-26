@@ -117,20 +117,87 @@ Singleton {
         writer.running = true
     }
 
+    // Zed держит JSONC: убираем комментарии и висячие запятые
+    function stripJsonc(text) {
+        let out = ""
+        let inStr = false
+        let esc = false
+        let inLine = false
+        let inBlock = false
+        for (let i = 0; i < text.length; i++) {
+            const c = text.charAt(i)
+            const n = text.charAt(i + 1)
+            if (inLine) {
+                if (c === "\n") {
+                    inLine = false
+                    out += c
+                }
+                continue
+            }
+            if (inBlock) {
+                if (c === "*" && n === "/") {
+                    inBlock = false
+                    i++
+                }
+                continue
+            }
+            if (inStr) {
+                out += c
+                if (esc)
+                    esc = false
+                else if (c === "\\")
+                    esc = true
+                else if (c === "\"")
+                    inStr = false
+                continue
+            }
+            if (c === "\"") {
+                inStr = true
+                out += c
+                continue
+            }
+            if (c === "/" && n === "/") {
+                inLine = true
+                i++
+                continue
+            }
+            if (c === "/" && n === "*") {
+                inBlock = true
+                i++
+                continue
+            }
+            out += c
+        }
+        return out.replace(/,\s*([}\]])/g, "$1")
+    }
+
     Process {
         id: reader
         command: ["cat", root.path]
         stdout: StdioCollector {
             onStreamFinished: {
-                try {
-                    const parsed = JSON.parse(this.text)
-                    root.data = Array.isArray(parsed) ? parsed : []
-                    root.flatten()
-                    root.dirty = false
-                    root.status = "loaded " + root.entries.length + " bindings"
-                } catch (e) {
-                    root.status = "keymap.json: " + e
+                const raw = "" + this.text
+                if (raw.trim() === "") {
+                    root.data = []
+                    root.entries = []
+                    root.status = "keymap.json is empty — Save creates it"
+                    return
                 }
+                let parsed = null
+                try {
+                    parsed = JSON.parse(raw)
+                } catch (e1) {
+                    try {
+                        parsed = JSON.parse(root.stripJsonc(raw))
+                    } catch (e2) {
+                        root.status = "parse error: " + e1
+                        return
+                    }
+                }
+                root.data = Array.isArray(parsed) ? parsed : []
+                root.flatten()
+                root.dirty = false
+                root.status = "loaded " + root.entries.length + " bindings"
             }
         }
     }
@@ -138,7 +205,7 @@ Singleton {
     Process {
         id: writer
         property string payload: ""
-        command: ["sh", "-c", "printf '%s' \"$1\" > \"$2\"", "ark", writer.payload, root.path]
+        command: ["sh", "-c", "mkdir -p \"$(dirname \"$2\")\" && printf '%s' \"$1\" > \"$2\"", "ark", writer.payload, root.path]
         onExited: (code, status) => {
             if (code !== 0) {
                 root.status = "write failed (" + code + ")"

@@ -154,7 +154,10 @@ Singleton {
                 root.lines = text === "" ? [] : text.split("\n")
                 root.parse()
                 root.dirty = false
-                root.status = "loaded " + root.entries.length + " bindings"
+                if (root.lines.indexOf(root.beginMark) < 0)
+                    root.status = "no managed block yet — Save creates it"
+                else
+                    root.status = "loaded " + root.entries.length + " bindings"
             }
         }
     }
