@@ -15,6 +15,7 @@ Item {
     property string status: ""
     property string pendingDelete: ""
     property bool showSources: false
+    property bool showHelp: false
 
     function refresh() {
         const f = folder.folder
@@ -87,9 +88,10 @@ Item {
             return
         page.status = "Downloading page " + page.pageNumber + "…"
         const src = ("" + Settings.get("wallpaper.sourceUrl", "")).trim()
-        const cmd = ["bash", page.home + "/.local/bin/wallhaven-download.sh", page.pageNumber]
-        if (src !== "")
-            cmd.push(src)
+        const key = ("" + Settings.get("wallpaper.apiKey", "")).trim()
+        const cmd = ["bash", page.home + "/.local/bin/wallhaven-download.sh", page.pageNumber, src]
+        if (key !== "")
+            cmd.push(key)
         downloadProc.command = cmd
         downloadProc.running = true
     }
@@ -148,11 +150,43 @@ Item {
         anchors.margins: 18
         spacing: 8
 
-        Text {
-            text: "Wallpapers"
-            color: Theme.accent
-            font.pixelSize: 18
-            font.bold: true
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Text {
+                text: "Wallpapers"
+                color: Theme.accent
+                font.pixelSize: 18
+                font.bold: true
+            }
+
+            Rectangle {
+                width: 24
+                height: 24
+                radius: 12
+                color: helpMouse.containsMouse ? Theme.surface : "transparent"
+                border.color: Theme.accent
+                border.width: 1
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "?"
+                    color: Theme.accent
+                    font.pixelSize: 13
+                    font.bold: true
+                }
+
+                MouseArea {
+                    id: helpMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: page.showHelp = !page.showHelp
+                }
+            }
+
+            Item { Layout.fillWidth: true }
         }
 
         Text {
@@ -160,6 +194,70 @@ Item {
             text: "~/Pictures/Wallpapers · click to apply · × moves to trash · Shift+× deletes permanently"
             color: Theme.muted
             font.pixelSize: 11
+        }
+
+        // ---------- API key ----------
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Text {
+                text: "API key"
+                color: Theme.fg
+                font.pixelSize: 12
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 30
+                radius: 7
+                color: Qt.alpha(Theme.surface, 0.7)
+                border.color: apiKeyInput.activeFocus ? Theme.accent : Theme.border
+                border.width: 1
+
+                TextInput {
+                    id: apiKeyInput
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    verticalAlignment: TextInput.AlignVCenter
+                    color: Theme.fg
+                    font.pixelSize: 11
+                    font.family: "JetBrainsMono Nerd Font"
+                    text: Settings.get("wallpaper.apiKey", "")
+                    selectByMouse: true
+                    clip: true
+                    echoMode: TextInput.Normal
+                    onTextEdited: Settings.set("wallpaper.apiKey", text)
+                    onEditingFinished: Settings.set("wallpaper.apiKey", text)
+                }
+            }
+
+            Rectangle {
+                width: 66
+                height: 30
+                radius: 7
+                color: apiSaveMouse.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Save"
+                    color: Theme.bg
+                    font.pixelSize: 12
+                    font.bold: true
+                }
+
+                MouseArea {
+                    id: apiSaveMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        Settings.set("wallpaper.apiKey", apiKeyInput.text.trim())
+                        Settings.apply()
+                        page.status = "API key saved"
+                    }
+                }
+            }
         }
 
         // ---------- источник ----------
@@ -479,6 +577,77 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: page.removeSource(modelData)
                     }
+                }
+            }
+        }
+    }
+    // ---------- справка ----------
+    MouseArea {
+        anchors.fill: parent
+        visible: page.showHelp
+        onClicked: page.showHelp = false
+    }
+
+    Rectangle {
+        id: helpPanel
+        visible: page.showHelp
+        anchors.centerIn: parent
+        width: Math.min(620, page.width - 80)
+        height: helpColumn.implicitHeight + 40
+        radius: 12
+        color: Qt.alpha(Theme.bg, 0.98)
+        border.color: Theme.accent
+        border.width: 1
+
+        Column {
+            id: helpColumn
+            anchors.fill: parent
+            anchors.margins: 20
+            spacing: 10
+
+            Text {
+                text: "Wallpapers — help"
+                color: Theme.accent
+                font.pixelSize: 16
+                font.bold: true
+            }
+
+            Text {
+                width: parent.width
+                color: Theme.fg
+                font.pixelSize: 12
+                wrapMode: Text.Wrap
+                lineHeight: 1.25
+                text: "Click a wallpaper to apply it. The choice is saved to ~/.config/quickshell/wallpaper.txt.\n\n"
+                    + "× moves the file to the trash (recoverable). Shift+× deletes it permanently.\n\n"
+                    + "Source URL accepts any Wallhaven page: /hot, /toplist, /random, /latest, /search?q=..., /collections/<user>/<id>. "
+                    + "Site links are converted to API links automatically, so you can paste what you see in the browser.\n\n"
+                    + "Save stores the current URL in the saved list; the ▾ button opens that list (click to use, × to remove).\n\n"
+                    + "API key is optional. Create one at wallhaven.cc/settings/account. It is required for NSFW results and some collections; "
+                    + "the key is appended to every request as &apikey=...\n\n"
+                    + "Page is the page number to download. Files go to ~/Pictures/Wallpapers."
+            }
+
+            Rectangle {
+                width: 100
+                height: 30
+                radius: 8
+                color: helpCloseMouse.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Close"
+                    color: Theme.bg
+                    font.pixelSize: 12
+                    font.bold: true
+                }
+
+                MouseArea {
+                    id: helpCloseMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: page.showHelp = false
                 }
             }
         }

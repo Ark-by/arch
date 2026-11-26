@@ -4,6 +4,12 @@ set -Eeuo pipefail
 DEFAULT_API="https://wallhaven.cc/api/v1/collections/lewdpatriot/935888"
 # Источник: 2-й аргумент, затем переменная окружения, затем значение по умолчанию
 API="${2:-${WALLHAVEN_API:-$DEFAULT_API}}"
+KEY="${3:-${WALLHAVEN_KEY:-}}"
+if [[ -n "$KEY" ]]; then
+    echo "API key: задан"
+else
+    echo "API key: нет (только SFW)"
+fi
 DEST="${WALLHAVEN_DEST:-$HOME/Pictures/Wallpapers}"
 DEFAULT_PAGE=14
 
@@ -69,7 +75,11 @@ echo "Получаю страницу $page..."
 # Запрашиваем только выбранную страницу
 sep="?"
 [[ "$API" == *\?* ]] && sep="&"
-response="$(curl -fsSL --retry 2 "${API}${sep}page=${page}")" || {
+url="${API}${sep}page=${page}"
+if [[ -n "$KEY" && "$url" != *"apikey="* ]]; then
+    url="${url}&apikey=${KEY}"
+fi
+response="$(curl -fsSL --retry 2 "$url")" || {
     echo "Не удалось получить данные Wallhaven."
     exit 1
 }

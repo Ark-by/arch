@@ -31,13 +31,15 @@
   "wallpaper": {
     "path": "",
     "sourceUrl": "https://wallhaven.cc/api/v1/collections/lewdpatriot/935888",
+    "apiKey": "",
     "savedSources": [
       "https://wallhaven.cc/api/v1/collections/lewdpatriot/935888",
       "https://wallhaven.cc/api/v1/search?sorting=toplist"
     ]
   },
   "fonts": {
-    "ui": 14,
+    "ui_family": "JetBrainsMono Nerd Font",
+    "ui_size": 14,
     "kitty_family": "JetBrainsMono Nerd Font Mono",
     "kitty_size": 10.5,
     "zed_buffer_family": "JetBrainsMono Nerd Font",
