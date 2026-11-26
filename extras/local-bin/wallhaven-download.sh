@@ -7,6 +7,39 @@ API="${2:-${WALLHAVEN_API:-$DEFAULT_API}}"
 DEST="${WALLHAVEN_DEST:-$HOME/Pictures/Wallpapers}"
 DEFAULT_PAGE=14
 
+# Ссылку с сайта (wallhaven.cc/hot, /toplist, /search?q=..., /collections/...)
+# превращаем в API-URL: скрипт работает только с api/v1.
+normalize_api() {
+    local u="$1"
+    if [[ "$u" == *"/api/v1/"* ]]; then
+        printf '%s' "$u"
+        return 0
+    fi
+    case "$u" in
+        */hot|*/hot/)          u="https://wallhaven.cc/api/v1/search?sorting=hot" ;;
+        */toplist|*/toplist/)  u="https://wallhaven.cc/api/v1/search?sorting=toplist" ;;
+        */random|*/random/)    u="https://wallhaven.cc/api/v1/search?sorting=random" ;;
+        */latest|*/latest/)    u="https://wallhaven.cc/api/v1/search?sorting=date_added" ;;
+        */search*)             u="${u/wallhaven.cc\/search/wallhaven.cc\/api\/v1\/search}" ;;
+        */collections/*)       u="${u/wallhaven.cc\/collections/wallhaven.cc\/api\/v1\/collections}" ;;
+    esac
+    printf '%s' "$u"
+}
+
+API="$(normalize_api "$API")"
+
+if [[ "$API" != *"/api/v1/"* ]]; then
+    echo "Не похоже на Wallhaven API: $API"
+    echo
+    echo "Подойдут ссылки:"
+    echo "  https://wallhaven.cc/hot"
+    echo "  https://wallhaven.cc/toplist"
+    echo "  https://wallhaven.cc/search?q=anime"
+    echo "  https://wallhaven.cc/collections/<user>/<id>"
+    echo "  https://wallhaven.cc/api/v1/search?q=anime   (уже API)"
+    exit 1
+fi
+
 # Проверка необходимых программ
 for cmd in curl jq; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -46,6 +79,7 @@ current_page="$(jq -r '.meta.current_page // empty' <<< "$response")"
 
 if [[ -z "$last_page" || -z "$current_page" ]]; then
     echo "Не удалось прочитать ответ API."
+    echo "Ответ сервера: $(head -c 300 <<< "$response")"
     exit 1
 fi
 
