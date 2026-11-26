@@ -5,10 +5,25 @@
     "opacity": 0.7,
     "position": "top",
     "hideFullscreen": false,
-    "modules": [
-      "launcher", "workspaces", "sysinfo", "clock",
-      "services", "shortcuts", "wallpapers", "themes", "kblayout", "power"
-    ]
+    "modules": {
+      "left": [
+        { "id": "launcher", "enabled": true },
+        { "id": "workspaces", "enabled": true },
+        { "id": "sysinfo", "enabled": true }
+      ],
+      "center": [
+        { "id": "clock", "enabled": true }
+      ],
+      "right": [
+        { "id": "services", "enabled": true },
+        { "id": "shortcuts", "enabled": true },
+        { "id": "wallpapers", "enabled": true },
+        { "id": "themes", "enabled": true },
+        { "id": "kblayout", "enabled": true },
+        { "id": "settings", "enabled": true },
+        { "id": "power", "enabled": true }
+      ]
+    }
   },
   "theme": {
     "name": "tokyonight"

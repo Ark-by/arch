@@ -1,120 +1,80 @@
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
 
+// Бар собирается из модулей, порядок и включение — в настройках (Super+S -> Bar).
 Variants {
     model: Quickshell.screens
+
     PanelWindow {
+        id: bar
         required property var modelData
         screen: modelData
-        anchors { top: true; left: true; right: true }
-        implicitHeight: Settings.get("bar.height", 36)
+
+        readonly property string pos: Settings.get("bar.position", "top")
+        readonly property bool hiddenByFullscreen: Settings.get("bar.hideFullscreen", false)
+            && Hyprland.activeToplevel !== null
+            && Hyprland.activeToplevel.fullscreen === true
+
+        anchors {
+            top: pos === "top"
+            bottom: pos === "bottom"
+            left: true
+            right: true
+        }
+
+        implicitHeight: hiddenByFullscreen ? 0 : Settings.get("bar.height", 36)
+        visible: !hiddenByFullscreen
         color: Qt.alpha(Theme.bg, Settings.get("bar.opacity", 0.7))
         WlrLayershell.namespace: "qs-bar"
         WlrLayershell.layer: WlrLayer.Top
-        exclusionMode: ExclusionMode.Auto
+        exclusionMode: hiddenByFullscreen ? ExclusionMode.Ignore : ExclusionMode.Auto
 
-        SystemClock { id: clock; precision: SystemClock.Minutes }
+        // Включённые модули стороны, в сохранённом порядке
+        function moduleIds(side) {
+            const list = Settings.get("bar.modules." + side, [])
+            const out = []
+            for (let i = 0; i < list.length; i++) {
+                const m = list[i]
+                if (m && m.enabled && m.id)
+                    out.push(m.id)
+            }
+            return out
+        }
 
-        // ---------------- ЛЕВАЯ ГРУППА ----------------
-        RowLayout {
+        Row {
             anchors.left: parent.left
             anchors.leftMargin: 12
             anchors.verticalCenter: parent.verticalCenter
             spacing: 12
 
-            IconButton {                      // меню приложений (логотип Arch)
-                text: "\uf303"
-                baseColor: Theme.accent
-                hoverColor: Theme.fg
-                onClicked: UiState.toggle("launcher")
-            }
-
             Repeater {
-                model: Hyprland.workspaces.values
-                Rectangle {
-                    required property var modelData
-                    implicitWidth: 26; implicitHeight: 22; radius: 6
-                    color: modelData.focused ? Theme.accent : Theme.surface
-                    Text {
-                        anchors.centerIn: parent
-                        text: modelData.id
-                        color: modelData.focused ? Theme.bg : Theme.accent
-                        font.bold: true
-                    }
-                    MouseArea { anchors.fill: parent; onClicked: modelData.activate() }
-                }
-            }
-
-            Text {                            // монитор ресурсов
-                text: "CPU " + ("" + Math.round(SysInfo.cpu)).padStart(3, "") + "% RAM " + ("" + Math.round(SysInfo.memPct)).padStart(3, "") + "%"
-                color: Theme.accent; font.pixelSize: 13; font.bold: true
-                font.family: "JetBrainsMono Nerd Font"
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: UiState.toggle("monitor") }
+                model: bar.moduleIds("left")
+                BarModule { kind: modelData }
             }
         }
 
-        // ---------------- ЦЕНТР: ДАТА И ВРЕМЯ ----------------
-        Text {
+        Row {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            text: Qt.locale("ru_RU").toString(clock.date, "dddd d MMMM  HH:mm").replace(/(^|\s)(\S)/g, (m, a, b) => a + b.toUpperCase())
-            color: Theme.accent
-            font.pixelSize: 14
-            font.bold: true
+            spacing: 12
+
+            Repeater {
+                model: bar.moduleIds("center")
+                BarModule { kind: modelData }
+            }
         }
 
-        // ---------------- ПРАВАЯ ГРУППА ----------------
-        RowLayout {
+        Row {
             anchors.right: parent.right
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
             spacing: 12
 
-            IconButton {                      // обход блокировок (щит)
-                text: "\uf132"
-                baseColor: Theme.accent
-                hoverColor: Theme.fg
-                onClicked: UiState.toggle("services")
-            }
-            IconButton {                      // горячие клавиши (клавиатура)
-                text: "\uf11c"
-                baseColor: Theme.accent
-                hoverColor: Theme.fg
-                onClicked: UiState.toggle("shortcuts")
-            }
-            IconButton {                      // выбор обоев (картинка)
-                text: "\uf03e"
-                baseColor: Theme.accent
-                hoverColor: Theme.fg
-                onClicked: UiState.toggle("wallpaper")
-            }
-            IconButton {                      // смена темы (кисть)
-                text: "\uf1fc"
-                baseColor: Theme.accent
-                hoverColor: Theme.fg
-                onClicked: UiState.toggle("themes")
-            }
-            IconButton {                      // раскладка клавиатуры
-                            text: KbLayout.code
-                            font.pixelSize: 15
-                            font.bold: true
-                            baseColor: Theme.accent
-                            hoverColor: Theme.fg
-                            onClicked: Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"])
-            }
-            IconButton {                      // настройки (шестерёнка)
-                text: "\uf013"
-                baseColor: Theme.accent
-                hoverColor: Theme.fg
-                onClicked: UiState.toggle("settings")
-            }
-            IconButton {                      // питание
-                text: "\uf011"
-                hoverColor: Theme.error
-                onClicked: UiState.toggle("power")
+            Repeater {
+                model: bar.moduleIds("right")
+                BarModule { kind: modelData }
             }
         }
     }
