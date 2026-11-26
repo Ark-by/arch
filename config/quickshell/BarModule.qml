@@ -9,7 +9,9 @@ Item {
     property string kind: ""
 
     implicitWidth: loader.item ? loader.item.implicitWidth : 0
-    implicitHeight: loader.item ? loader.item.implicitHeight : 24
+    // Одинаковая высота у всех модулей: Row выравнивает детей по верху,
+    // поэтому без этого короткие тексты (sysinfo, kblayout) уезжают вверх.
+    implicitHeight: 24
 
     Loader {
         id: loader
