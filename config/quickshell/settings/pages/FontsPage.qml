@@ -29,7 +29,7 @@ Item {
 
             Text {
                 width: parent.width
-                text: "Panel and terminal fonts apply live. kitty is reloaded, Zed needs a restart."
+                text: "Panel and terminal fonts apply live. kitty is reloaded, Zed needs a restart.\n\npt → px: 1 pt = 4/3 px at 96 DPI, so 10.5 pt ≈ 14 px. kitty uses points, the bar and Zed use pixels."
                 color: Theme.muted
                 font.pixelSize: 11
                 wrapMode: Text.Wrap
@@ -67,33 +67,12 @@ Item {
                 bottomPadding: 2
             }
 
-            Text {
-                text: "Family"
-                color: Theme.fg
-                font.pixelSize: 12
-            }
-
-            Rectangle {
+            FontSelect {
                 width: parent.width
-                height: 28
-                radius: 7
-                color: Qt.alpha(Theme.surface, 0.7)
-                border.color: kittyFamily.activeFocus ? Theme.accent : Theme.border
-                border.width: 1
-
-                TextInput {
-                    id: kittyFamily
-                    anchors.fill: parent
-                    anchors.margins: 7
-                    verticalAlignment: TextInput.AlignVCenter
-                    color: Theme.fg
-                    font.pixelSize: 12
-                    text: Settings.get("fonts.kitty_family", "JetBrainsMono Nerd Font Mono")
-                    selectByMouse: true
-                    clip: true
-                    onTextEdited: Settings.set("fonts.kitty_family", text)
-                    onEditingFinished: Settings.set("fonts.kitty_family", text)
-                }
+                label: "Family"
+                value: Settings.get("fonts.kitty_family", "JetBrainsMono Nerd Font Mono")
+                families: FontList.families
+                onSelected: (f) => Settings.set("fonts.kitty_family", f)
             }
 
             SliderRow {
@@ -141,6 +120,30 @@ Item {
                 font.pixelSize: 14
                 font.bold: true
                 bottomPadding: 2
+            }
+
+            FontSelect {
+                width: parent.width
+                label: "Buffer family"
+                value: Settings.get("fonts.zed_buffer_family", "JetBrainsMono Nerd Font")
+                families: FontList.families
+                onSelected: (f) => Settings.set("fonts.zed_buffer_family", f)
+            }
+
+            FontSelect {
+                width: parent.width
+                label: "UI family"
+                value: Settings.get("fonts.zed_ui_family", "JetBrainsMono Nerd Font")
+                families: FontList.families
+                onSelected: (f) => Settings.set("fonts.zed_ui_family", f)
+            }
+
+            FontSelect {
+                width: parent.width
+                label: "Terminal family"
+                value: Settings.get("fonts.zed_terminal_family", "JetBrainsMono Nerd Font")
+                families: FontList.families
+                onSelected: (f) => Settings.set("fonts.zed_terminal_family", f)
             }
 
             SliderRow {
