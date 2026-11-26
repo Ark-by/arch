@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-API="https://wallhaven.cc/api/v1/collections/lewdpatriot/935888"
-DEST="$HOME/Pictures/Wallpapers"
+DEFAULT_API="https://wallhaven.cc/api/v1/collections/lewdpatriot/935888"
+# Источник: 2-й аргумент, затем переменная окружения, затем значение по умолчанию
+API="${2:-${WALLHAVEN_API:-$DEFAULT_API}}"
+DEST="${WALLHAVEN_DEST:-$HOME/Pictures/Wallpapers}"
 DEFAULT_PAGE=14
 
 # Проверка необходимых программ
@@ -28,10 +30,13 @@ if [[ ! "$page" =~ ^[1-9][0-9]*$ ]]; then
 fi
 
 echo
-echo "Получаю страницу $page из Wallhaven..."
+echo "Источник: $API"
+echo "Получаю страницу $page..."
 
 # Запрашиваем только выбранную страницу
-response="$(curl -fsSL --retry 2 "${API}?page=${page}")" || {
+sep="?"
+[[ "$API" == *\?* ]] && sep="&"
+response="$(curl -fsSL --retry 2 "${API}${sep}page=${page}")" || {
     echo "Не удалось получить данные Wallhaven."
     exit 1
 }

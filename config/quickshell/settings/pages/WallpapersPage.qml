@@ -44,7 +44,11 @@ Item {
             return
         page.status = "Downloading page " + page.pageNumber + "…"
         downloadOut.text = ""
-        downloadProc.command = ["bash", page.home + "/.local/bin/wallhaven-download.sh", page.pageNumber]
+        const src = ("" + Settings.get("wallpaper.sourceUrl", "")).trim()
+        const cmd = ["bash", page.home + "/.local/bin/wallhaven-download.sh", page.pageNumber]
+        if (src !== "")
+            cmd.push(src)
+        downloadProc.command = cmd
         downloadProc.running = true
     }
 
@@ -104,6 +108,42 @@ Item {
             text: "~/Pictures/Wallpapers · click to apply · × moves to trash"
             color: Theme.muted
             font.pixelSize: 11
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Text {
+                text: "Source URL"
+                color: Theme.fg
+                font.pixelSize: 12
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 30
+                radius: 7
+                color: Qt.alpha(Theme.surface, 0.7)
+                border.color: sourceInput.activeFocus ? Theme.accent : Theme.border
+                border.width: 1
+
+                TextInput {
+                    id: sourceInput
+                    anchors.fill: parent
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 8
+                    verticalAlignment: TextInput.AlignVCenter
+                    color: Theme.fg
+                    font.pixelSize: 11
+                    font.family: "JetBrainsMono Nerd Font"
+                    text: Settings.get("wallpaper.sourceUrl", "")
+                    selectByMouse: true
+                    clip: true
+                    onTextEdited: Settings.set("wallpaper.sourceUrl", text)
+                    onEditingFinished: Settings.set("wallpaper.sourceUrl", text)
+                }
+            }
         }
 
         RowLayout {
