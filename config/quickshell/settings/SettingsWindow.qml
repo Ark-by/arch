@@ -114,6 +114,16 @@ PanelWindow {
         }
     }
 
+    Connections {
+        target: UiState
+        function onSettingsPageChanged() {
+            if (UiState.settingsPage === "")
+                return
+            win.showPage(UiState.settingsPage)
+            UiState.settingsPage = ""
+        }
+    }
+
     IpcHandler {
         target: "settings"
         function open(): void { win.toggleSettings() }
