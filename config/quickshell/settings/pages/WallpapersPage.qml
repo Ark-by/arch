@@ -28,14 +28,20 @@ Item {
         page.status = "Applied: " + path.substring(path.lastIndexOf("/") + 1)
     }
 
-    function askDelete(path) {
+    function askDelete(path, permanent) {
+        if (permanent === true) {
+            remover.target = path
+            remover.running = true
+            page.pendingDelete = ""
+            return
+        }
         if (page.pendingDelete === path) {
             trash.target = path
             trash.running = true
             page.pendingDelete = ""
         } else {
             page.pendingDelete = path
-            page.status = "Press × again to move to trash"
+            page.status = "Press × again to move to trash (Shift+× deletes permanently)"
             confirmTimer.restart()
         }
     }
@@ -127,6 +133,16 @@ Item {
         }
     }
 
+    Process {
+        id: remover
+        property string target: ""
+        command: ["rm", "-f", remover.target]
+        onExited: (code, status) => {
+            page.status = code === 0 ? "Deleted permanently" : "Delete failed (" + code + ")"
+            page.refresh()
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 18
@@ -141,7 +157,7 @@ Item {
 
         Text {
             Layout.fillWidth: true
-            text: "~/Pictures/Wallpapers · click to apply · × moves to trash"
+            text: "~/Pictures/Wallpapers · click to apply · × moves to trash · Shift+× deletes permanently"
             color: Theme.muted
             font.pixelSize: 11
         }
@@ -360,7 +376,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: page.askDelete(filePath)
+                        onClicked: (m) => page.askDelete(filePath, (m.modifiers & Qt.ShiftModifier) !== 0)
                     }
                 }
             }
