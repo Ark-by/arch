@@ -7,7 +7,7 @@ import qs
 Rectangle {
     id: root
 
-    property color color: "#000000"
+    property color current: "#000000"
 
     signal accepted(color value)
     signal cancelled()
@@ -57,13 +57,13 @@ Rectangle {
     }
 
     function load() {
-        const c = rgb2hsv(root.color.r * 255, root.color.g * 255, root.color.b * 255)
+        const c = rgb2hsv(root.current.r * 255, root.current.g * 255, root.current.b * 255)
         root.h = Math.round(c.h)
         root.s = Math.round(c.s * 100)
         root.v = Math.round(c.v * 100)
     }
 
-    onColorChanged: load()
+    onCurrentChanged: load()
     Component.onCompleted: load()
 
     ColumnLayout {

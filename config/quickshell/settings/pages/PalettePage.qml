@@ -265,7 +265,7 @@ Item {
 
         ColorPicker {
             anchors.centerIn: parent
-            color: page.valueOf(page.pickingKey)
+            current: page.valueOf(page.pickingKey)
 
             onAccepted: (c) => {
                 page.setField(page.pickingKey, ("" + c).toString())
