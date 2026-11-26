@@ -20,7 +20,9 @@ Item {
     readonly property var tabs: [
         { id: "hyprland", label: "Hyprland" },
         { id: "kitty", label: "kitty" },
-        { id: "cmus", label: "cmus" }
+        { id: "cmus", label: "cmus" },
+        { id: "zed", label: "zed" },
+        { id: "yazi", label: "yazi" }
     ]
 
     readonly property var catalog: [
@@ -50,11 +52,23 @@ Item {
         return page.tab === "hyprland"
     }
 
+    function isApp() {
+        return page.tab === "kitty" || page.tab === "cmus"
+    }
+
+    function isExtra() {
+        return page.tab === "zed" || page.tab === "yazi"
+    }
+
     function selectTab(id) {
         page.tab = id
-        if (id !== "hyprland") {
+        if (id === "kitty" || id === "cmus") {
             AppKeys.targetId = id
             AppKeys.reload()
+        } else if (id === "zed") {
+            ZedKeys.reload()
+        } else if (id === "yazi") {
+            YaziKeys.reload()
         }
     }
 
@@ -124,6 +138,7 @@ Item {
     }
 
     Flickable {
+        visible: !page.isExtra()
         anchors.fill: parent
         contentWidth: width
         contentHeight: col.implicitHeight + 36
@@ -191,7 +206,7 @@ Item {
 
             Text {
                 width: parent.width
-                text: page.isHypr() ? KeyStore.status : AppKeys.status
+                text: page.isHypr() ? KeyStore.status : (page.isApp() ? AppKeys.status : (page.tab === "zed" ? ZedKeys.status : YaziKeys.status))
                 color: Theme.muted
                 font.pixelSize: 11
                 bottomPadding: 4
@@ -328,7 +343,7 @@ Item {
             // ---------- kitty / cmus ----------
             Column {
                 width: col.width
-                visible: !page.isHypr()
+                visible: page.isApp()
                 spacing: 2
 
                 Repeater {
@@ -592,7 +607,7 @@ Item {
             // kitty/cmus: ключ + команда
             Column {
                 width: col.width
-                visible: !page.isHypr()
+                visible: page.isApp()
                 spacing: 4
 
                 FontSelect {
@@ -777,6 +792,13 @@ Item {
             }
         }
     }
+    Loader {
+        visible: page.isExtra()
+        active: page.isExtra()
+        anchors.fill: parent
+        source: page.tab === "zed" ? "KeysZedPane.qml" : "KeysYaziPane.qml"
+    }
+
     // ---------- выбор действия ----------
     MouseArea {
         anchors.fill: parent
