@@ -30,7 +30,11 @@
   },
   "wallpaper": {
     "path": "",
-    "sourceUrl": "https://wallhaven.cc/api/v1/collections/lewdpatriot/935888"
+    "sourceUrl": "https://wallhaven.cc/api/v1/collections/lewdpatriot/935888",
+    "savedSources": [
+      "https://wallhaven.cc/api/v1/collections/lewdpatriot/935888",
+      "https://wallhaven.cc/api/v1/search?sorting=toplist"
+    ]
   },
   "fonts": {
     "ui": 14,

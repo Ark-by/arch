@@ -14,6 +14,7 @@ Item {
     property string pageNumber: "14"
     property string status: ""
     property string pendingDelete: ""
+    property bool showSources: false
 
     function refresh() {
         const f = folder.folder
@@ -37,6 +38,42 @@ Item {
             page.status = "Press × again to move to trash"
             confirmTimer.restart()
         }
+    }
+
+    function savedSources() {
+        const list = Settings.get("wallpaper.savedSources", [])
+        return Array.isArray(list) ? list : []
+    }
+
+    function saveSource() {
+        const url = ("" + Settings.get("wallpaper.sourceUrl", "")).trim()
+        if (url === "") {
+            page.status = "Source URL is empty"
+            return
+        }
+        const list = JSON.parse(JSON.stringify(page.savedSources()))
+        if (list.indexOf(url) < 0)
+            list.push(url)
+        Settings.set("wallpaper.savedSources", list)
+        Settings.set("wallpaper.sourceUrl", url)
+        Settings.apply()
+        page.status = "Saved to list"
+        page.showSources = false
+    }
+
+    function useSource(url) {
+        Settings.set("wallpaper.sourceUrl", url)
+        page.status = "Selected source"
+        page.showSources = false
+    }
+
+    function removeSource(url) {
+        const list = JSON.parse(JSON.stringify(page.savedSources()))
+        const i = list.indexOf(url)
+        if (i >= 0)
+            list.splice(i, 1)
+        Settings.set("wallpaper.savedSources", list)
+        page.status = "Removed from list"
     }
 
     function download() {
@@ -110,7 +147,9 @@ Item {
             font.pixelSize: 11
         }
 
+        // ---------- источник ----------
         RowLayout {
+            id: sourceRow
             Layout.fillWidth: true
             spacing: 8
 
@@ -131,8 +170,7 @@ Item {
                 TextInput {
                     id: sourceInput
                     anchors.fill: parent
-                    anchors.leftMargin: 8
-                    anchors.rightMargin: 8
+                    anchors.margins: 8
                     verticalAlignment: TextInput.AlignVCenter
                     color: Theme.fg
                     font.pixelSize: 11
@@ -144,14 +182,60 @@ Item {
                     onEditingFinished: Settings.set("wallpaper.sourceUrl", text)
                 }
             }
+
+            Rectangle {
+                width: 30
+                height: 30
+                radius: 7
+                color: page.showSources ? Qt.alpha(Theme.accent, 0.25) : Qt.alpha(Theme.surface, 0.7)
+                border.color: page.showSources ? Theme.accent : Theme.border
+                border.width: 1
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "▾"
+                    color: Theme.accent
+                    font.pixelSize: 14
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: page.showSources = !page.showSources
+                }
+            }
+
+            Rectangle {
+                width: 66
+                height: 30
+                radius: 7
+                color: saveMouse.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Save"
+                    color: Theme.bg
+                    font.pixelSize: 12
+                    font.bold: true
+                }
+
+                MouseArea {
+                    id: saveMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: page.saveSource()
+                }
+            }
         }
 
+        // ---------- страница Wallhaven ----------
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
 
             Text {
-                text: "Wallhaven page"
+                text: "Page"
                 color: Theme.fg
                 font.pixelSize: 12
             }
@@ -211,13 +295,13 @@ Item {
             text: page.status
             color: Theme.muted
             font.pixelSize: 11
-            elide: Text.ElideRight
             wrapMode: Text.WrapAnywhere
             maximumLineCount: 2
+            elide: Text.ElideRight
         }
 
+        // ---------- сетка ----------
         GridView {
-            id: grid
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
@@ -286,10 +370,102 @@ Item {
         Text {
             Layout.fillWidth: true
             visible: folder.count === 0
-            text: "No wallpapers yet — download a Wallhaven page above, or drop files into ~/Pictures/Wallpapers."
+            text: "No wallpapers yet — download a page above, or drop files into ~/Pictures/Wallpapers."
             color: Theme.muted
             font.pixelSize: 11
             wrapMode: Text.Wrap
+        }
+    }
+
+    // ---------- список сохранённых источников ----------
+    MouseArea {
+        anchors.fill: parent
+        visible: page.showSources
+        onClicked: page.showSources = false
+    }
+
+    Rectangle {
+        id: sourcesPopup
+        visible: page.showSources
+
+        readonly property point anchor: sourceRow.mapToItem(page, 0, 0)
+
+        x: page.width - 18 - width
+        y: anchor.y + sourceRow.height + 4
+        width: 420
+        height: Math.min(190, sourcesList.contentHeight + 12)
+
+        radius: 10
+        color: Qt.alpha(Theme.bg, 0.98)
+        border.color: Theme.accent
+        border.width: 1
+        clip: true
+
+        ListView {
+            id: sourcesList
+            anchors.fill: parent
+            anchors.margins: 6
+            clip: true
+            spacing: 2
+            model: page.savedSources()
+
+            delegate: Rectangle {
+                required property string modelData
+
+                readonly property bool current: modelData === Settings.get("wallpaper.sourceUrl", "")
+
+                width: sourcesList.width
+                height: 32
+                radius: 6
+                color: current ? Qt.alpha(Theme.accent, 0.22) : (rowMouse.containsMouse ? Theme.surface : "transparent")
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 8
+                    anchors.right: removeBtn.left
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: modelData
+                    color: current ? Theme.fg : Theme.muted
+                    font.pixelSize: 11
+                    font.family: "JetBrainsMono Nerd Font"
+                    elide: Text.ElideMiddle
+                }
+
+                MouseArea {
+                    id: rowMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: page.useSource(modelData)
+                }
+
+                Rectangle {
+                    id: removeBtn
+                    anchors.right: parent.right
+                    anchors.rightMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 22
+                    height: 22
+                    radius: 5
+                    color: removeMouse.containsMouse ? Qt.alpha(Theme.error, 0.25) : "transparent"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "×"
+                        color: Theme.error
+                        font.pixelSize: 13
+                    }
+
+                    MouseArea {
+                        id: removeMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: page.removeSource(modelData)
+                    }
+                }
+            }
         }
     }
 }
