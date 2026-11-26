@@ -10,8 +10,8 @@ Variants {
         required property var modelData
         screen: modelData
         anchors { top: true; left: true; right: true }
-        implicitHeight: 36
-        color: Qt.alpha(Theme.bg, 0.7)
+        implicitHeight: Settings.get("bar.height", 36)
+        color: Qt.alpha(Theme.bg, Settings.get("bar.opacity", 0.7))
         WlrLayershell.namespace: "qs-bar"
         WlrLayershell.layer: WlrLayer.Top
         exclusionMode: ExclusionMode.Auto
@@ -104,6 +104,12 @@ Variants {
                             baseColor: Theme.accent
                             hoverColor: Theme.fg
                             onClicked: Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"])
+            }
+            IconButton {                      // настройки (шестерёнка)
+                text: "\uf013"
+                baseColor: Theme.accent
+                hoverColor: Theme.fg
+                onClicked: UiState.toggle("settings")
             }
             IconButton {                      // питание
                 text: "\uf011"

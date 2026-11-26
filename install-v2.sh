@@ -295,6 +295,14 @@ if (( DO_CONFIG )); then
     section "Конфиги"
 
     mkdir -p "$HOME/.config"
+
+    # user_settings.json — не перезаписываем: переустановка не должна терять настройки
+    USER_SETTINGS_SAVED=""
+    if [[ -f "$HOME/.config/quickshell/user_settings.json" ]]; then
+        USER_SETTINGS_SAVED="$(mktemp)"
+        cp -a -- "$HOME/.config/quickshell/user_settings.json" "$USER_SETTINGS_SAVED"
+    fi
+
     mapfile -d '' CONFIG_ENTRIES < <(find "$CONFIG_SOURCE" -mindepth 1 -maxdepth 1 -print0)
 
     for src in "${CONFIG_ENTRIES[@]}"; do
@@ -310,6 +318,12 @@ if (( DO_CONFIG )); then
         cp -a -- "$src" "$dst"
         ok "Восстановлен ~/.config/$name"
     done
+
+    if [[ -n "$USER_SETTINGS_SAVED" && -f "$USER_SETTINGS_SAVED" ]]; then
+        cp -a -- "$USER_SETTINGS_SAVED" "$HOME/.config/quickshell/user_settings.json"
+        rm -f -- "$USER_SETTINGS_SAVED"
+        ok "user_settings.json сохранён (настройки не сброшены)"
+    fi
 
     # --- BatteryWidget.qml: в репозитории это симлинк на отдельный проект ---
     BW="$HOME/.config/quickshell/BatteryWidget.qml"

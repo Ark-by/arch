@@ -11,6 +11,7 @@ ShellRoot {
     MonitorMenu {}
     ShortcutsMenu {}
     ServicesMenu {}
+    SettingsWindow {}
 
     // Команды, которые вызывает Hyprland по горячим клавишам
     IpcHandler {
