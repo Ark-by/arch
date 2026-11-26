@@ -14,6 +14,7 @@ Item {
     property int newActionIndex: 0
     property int pickingIndex: -1
     property string pickingField: "action"
+    property bool pickerOpen: false
     property string newContext: "common"
 
     readonly property var tabs: [
@@ -68,6 +69,8 @@ Item {
 
     function pickAction(index) {
         page.pickingIndex = index
+        page.pickingField = "action"
+        page.pickerOpen = true
     }
 
     function currentAction(lineIndex) {
@@ -88,6 +91,7 @@ Item {
         }
         page.pickingIndex = -1
         page.pickingField = "action"
+        page.pickerOpen = false
     }
 
     function pickerItems() {
@@ -381,6 +385,7 @@ Item {
                                 onClicked: {
                                     page.pickingIndex = modelData.index
                                     page.pickingField = "context"
+                                    page.pickerOpen = true
                                 }
                             }
                         }
@@ -686,6 +691,7 @@ Item {
                             onClicked: {
                                 page.pickingField = "action"
                                 page.pickingIndex = -2
+                                page.pickerOpen = true
                             }
                         }
                     }
@@ -774,17 +780,23 @@ Item {
     // ---------- выбор действия ----------
     MouseArea {
         anchors.fill: parent
-        visible: page.pickingIndex >= 0
-        onClicked: page.pickingIndex = -1
+        visible: page.pickerOpen
+        onClicked: {
+            page.pickerOpen = false
+            page.pickingIndex = -1
+        }
     }
 
     ActionPicker {
-        visible: page.pickingIndex >= 0
+        visible: page.pickerOpen
         anchors.centerIn: parent
         title: page.pickingField === "context" ? "cmus context" : (page.tab === "kitty" ? "kitty action" : "cmus command")
         items: page.pickerItems()
         current: page.pickingField === "context" ? (AppKeys.entryAt(page.pickingIndex) ? AppKeys.entryAt(page.pickingIndex).context : "") : (page.pickingIndex === -2 ? page.appAction : page.currentAction(page.pickingIndex))
         onAccepted: (v) => page.applyPicked(v)
-        onCancelled: page.pickingIndex = -1
+        onCancelled: {
+            page.pickerOpen = false
+            page.pickingIndex = -1
+        }
     }
 }
