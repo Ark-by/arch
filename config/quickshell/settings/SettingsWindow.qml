@@ -37,7 +37,7 @@ PanelWindow {
     property bool confirmResetAll: false
     property string status: ""
 
-    function openPage(id) {
+    function showPage(id) {
         if (id) {
             for (let i = 0; i < pages.length; i++) {
                 if (pages[i].id === id) {
@@ -49,6 +49,15 @@ PanelWindow {
         confirmResetAll = false
         status = ""
         UiState.panel = "settings"
+    }
+
+    // Super+S: открыть, повторно — закрыть
+    function toggleSettings() {
+        if (UiState.panel === "settings") {
+            close()
+            return
+        }
+        showPage("")
     }
 
     function close() {
@@ -107,8 +116,8 @@ PanelWindow {
 
     IpcHandler {
         target: "settings"
-        function open(): void { win.openPage("") }
-        function openPage(page: string): void { win.openPage(page) }
+        function open(): void { win.toggleSettings() }
+        function openPage(page: string): void { win.showPage(page) }
         function close(): void { win.close() }
         function apply(): void { win.applyNow() }
     }
