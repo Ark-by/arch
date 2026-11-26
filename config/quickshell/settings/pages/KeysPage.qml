@@ -13,6 +13,8 @@ Item {
     property string appAction: ""
     property int newActionIndex: 0
     property int pickingIndex: -1
+    property string pickingField: "action"
+    property string newContext: "common"
 
     readonly property var tabs: [
         { id: "hyprland", label: "Hyprland" },
@@ -76,14 +78,21 @@ Item {
     }
 
     function applyPicked(value) {
-        if (page.pickingIndex === -2)
+        if (page.pickingIndex === -2) {
             page.appAction = value
-        else if (page.pickingIndex >= 0)
-            AppKeys.setAction(page.pickingIndex, value)
+        } else if (page.pickingIndex >= 0) {
+            if (page.pickingField === "context")
+                AppKeys.setContext(page.pickingIndex, value)
+            else
+                AppKeys.setAction(page.pickingIndex, value)
+        }
         page.pickingIndex = -1
+        page.pickingField = "action"
     }
 
     function pickerItems() {
+        if (page.pickingField === "context")
+            return AppKeys.cmusContexts
         return page.tab === "kitty" ? KittyActions.actions : CmusCommands.commands
     }
 
@@ -92,7 +101,7 @@ Item {
         const a = ("" + page.appAction).trim()
         if (k === "" || a === "")
             return
-        AppKeys.add(k, a)
+        AppKeys.add(k, a, page.newContext, "")
         AppKeys.status = "added " + k
     }
 
@@ -332,11 +341,56 @@ Item {
                         border.width: 1
 
                         Rectangle {
-                            id: keyField
+                            id: contextBtn
+                            visible: page.tab === "cmus"
                             anchors.left: parent.left
                             anchors.leftMargin: 10
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 150
+                            width: 88
+                            height: 26
+                            radius: 6
+                            color: Qt.alpha(Theme.bg, 0.6)
+                            border.color: Theme.border
+                            border.width: 1
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 8
+                                anchors.right: ctxArrow.left
+                                anchors.rightMargin: 4
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: modelData.context === "" ? "—" : modelData.context
+                                color: Theme.fg
+                                font.pixelSize: 10
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                id: ctxArrow
+                                anchors.right: parent.right
+                                anchors.rightMargin: 6
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "▾"
+                                color: Theme.accent
+                                font.pixelSize: 10
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    page.pickingIndex = modelData.index
+                                    page.pickingField = "context"
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            id: keyField
+                            anchors.left: contextBtn.visible ? contextBtn.right : parent.left
+                            anchors.leftMargin: contextBtn.visible ? 6 : 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: contextBtn.visible ? 120 : 150
                             height: 26
                             radius: 6
                             color: Qt.alpha(Theme.bg, 0.6)
@@ -536,6 +590,15 @@ Item {
                 visible: !page.isHypr()
                 spacing: 4
 
+                FontSelect {
+                    width: col.width
+                    visible: page.tab === "cmus"
+                    label: "Context"
+                    value: page.newContext
+                    families: AppKeys.cmusContexts
+                    onSelected: (v) => page.newContext = v
+                }
+
                 Text {
                     text: page.tab === "kitty" ? "Kitty key (e.g. ctrl+shift+t)" : "cmus key (e.g. x)"
                     color: Theme.fg
@@ -710,9 +773,9 @@ Item {
     ActionPicker {
         visible: page.pickingIndex >= 0
         anchors.centerIn: parent
-        title: page.tab === "kitty" ? "kitty action" : "cmus command"
+        title: page.pickingField === "context" ? "cmus context" : (page.tab === "kitty" ? "kitty action" : "cmus command")
         items: page.pickerItems()
-        current: page.pickingIndex === -2 ? page.appAction : page.currentAction(page.pickingIndex)
+        current: page.pickingField === "context" ? (AppKeys.entryAt(page.pickingIndex) ? AppKeys.entryAt(page.pickingIndex).context : "") : (page.pickingIndex === -2 ? page.appAction : page.currentAction(page.pickingIndex))
         onAccepted: (v) => page.applyPicked(v)
         onCancelled: page.pickingIndex = -1
     }

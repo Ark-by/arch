@@ -2,7 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// Наиболее употребимые действия kitty (map <key> <action>).
+// Действия kitty для map <key> <action> (по docs kitty actions).
 Singleton {
     readonly property var actions: [
         "new_tab", "new_tab_with_cwd", "close_tab", "next_tab", "previous_tab",
@@ -17,13 +17,14 @@ Singleton {
         "scroll_line_up", "scroll_line_down", "scroll_page_up", "scroll_page_down",
         "scroll_home", "scroll_end", "scroll_to_prompt",
         "show_scrollback", "show_last_command_output", "show_hyperlink_target",
-        "toggle_layout", "select_all",
+        "toggle_layout", "select_all", "no_op",
         "copy_to_clipboard", "copy_and_clear_or_interrupt", "paste_from_clipboard", "paste_from_selection",
         "open_url_with_hints", "insert_text", "pass_selection_to_program",
         "send_text all", "send_key all", "combine",
         "launch", "kbd_mode", "debug_config", "edit_config_file",
         "reset_terminal", "clear_terminal",
         "increase_font_size", "decrease_font_size", "reset_font_size",
-        "toggle_fullscreen_layout", "search"
+        "kitten themes", "kitten hints", "kitten unicode_input", "kitten choose_font",
+        "search", "toggle_fullscreen_layout"
     ]
 }
