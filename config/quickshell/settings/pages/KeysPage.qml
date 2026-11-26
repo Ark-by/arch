@@ -12,6 +12,7 @@ Item {
     property string appKey: ""
     property string appAction: ""
     property int newActionIndex: 0
+    property int pickingIndex: -1
 
     readonly property var tabs: [
         { id: "hyprland", label: "Hyprland" },
@@ -61,6 +62,29 @@ Item {
             return
         KeyStore.add(key, a.dispatch, "Extra: " + a.name)
         KeyStore.status = "added " + a.name
+    }
+
+    function pickAction(index) {
+        page.pickingIndex = index
+    }
+
+    function currentAction(lineIndex) {
+        for (let i = 0; i < AppKeys.entries.length; i++)
+            if (AppKeys.entries[i].index === lineIndex)
+                return AppKeys.entries[i].action
+        return ""
+    }
+
+    function applyPicked(value) {
+        if (page.pickingIndex === -2)
+            page.appAction = value
+        else if (page.pickingIndex >= 0)
+            AppKeys.setAction(page.pickingIndex, value)
+        page.pickingIndex = -1
+    }
+
+    function pickerItems() {
+        return page.tab === "kitty" ? KittyActions.actions : CmusCommands.commands
     }
 
     function addApp() {
@@ -338,7 +362,7 @@ Item {
                             id: actionField
                             anchors.left: keyField.right
                             anchors.leftMargin: 8
-                            anchors.right: appActions.left
+                            anchors.right: pickerBtn.left
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
                             height: 26
@@ -359,6 +383,34 @@ Item {
                                 selectByMouse: true
                                 clip: true
                                 onEditingFinished: AppKeys.setAction(modelData.index, text)
+                            }
+                        }
+
+                        Rectangle {
+                            id: pickerBtn
+                            anchors.right: appActions.left
+                            anchors.rightMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 24
+                            height: 26
+                            radius: 6
+                            color: pickerMouse.containsMouse ? Qt.alpha(Theme.accent, 0.25) : Qt.alpha(Theme.bg, 0.6)
+                            border.color: Theme.border
+                            border.width: 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "▾"
+                                color: Theme.accent
+                                font.pixelSize: 12
+                            }
+
+                            MouseArea {
+                                id: pickerMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: page.pickAction(modelData.index)
                             }
                         }
 
@@ -543,6 +595,30 @@ Item {
                         onAccepted: page.addApp()
                     }
                 }
+
+                Rectangle {
+                    width: 130
+                    height: 28
+                    radius: 7
+                    color: pickNewMouse.containsMouse ? Theme.surface : "transparent"
+                    border.color: Theme.border
+                    border.width: 1
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "Pick from list"
+                        color: Theme.fg
+                        font.pixelSize: 11
+                    }
+
+                    MouseArea {
+                        id: pickNewMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: page.pickingIndex = -2
+                    }
+                }
             }
 
             Item { width: 1; height: 8 }
@@ -623,5 +699,21 @@ Item {
                 }
             }
         }
+    }
+    // ---------- выбор действия ----------
+    MouseArea {
+        anchors.fill: parent
+        visible: page.pickingIndex >= 0
+        onClicked: page.pickingIndex = -1
+    }
+
+    ActionPicker {
+        visible: page.pickingIndex >= 0
+        anchors.centerIn: parent
+        title: page.tab === "kitty" ? "kitty action" : "cmus command"
+        items: page.pickerItems()
+        current: page.pickingIndex === -2 ? page.appAction : page.currentAction(page.pickingIndex)
+        onAccepted: (v) => page.applyPicked(v)
+        onCancelled: page.pickingIndex = -1
     }
 }
