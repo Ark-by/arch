@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import qs
-import "../controls"
+import qs.settings.controls
 
 Item {
     ColumnLayout {
