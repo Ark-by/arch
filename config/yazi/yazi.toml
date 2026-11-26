@@ -5,3 +5,6 @@ show_hidden = true
 edit = [
   { run = "zeditor -w %s", desc = "Sublime Text", for = "unix", block = false },
 ]
+play = [
+	{ run = 'kitty --detach cmus "$@"', desc = "cmus", orphan = true, for = "unix" },
+]

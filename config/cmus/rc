@@ -1,0 +1,3 @@
+set start_view=browser
+colorscheme ark
+bind -f common space player-pause

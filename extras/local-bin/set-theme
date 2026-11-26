@@ -122,6 +122,15 @@ mkdir -p "$cfg/kitty"
 } > "$cfg/kitty/theme.conf"
 command -v pkill >/dev/null 2>&1 && pkill -USR1 kitty 2>/dev/null || true
 
+# ---------- 2.5. cmus (ANSI-палитра Kitty) ----------
+mkdir -p "$cfg/cmus"
+cp "$tpl/cmus.theme.tpl" "$cfg/cmus/ark.theme"
+
+# Обновляем тему уже запущенного cmus
+if command -v cmus-remote >/dev/null 2>&1; then
+  cmus-remote -C "colorscheme ark" >/dev/null 2>&1 || true
+fi
+
 # ---------- 3. Hyprland (live, благодаря dofile в hyprland.lua) ----------
 mkdir -p "$cfg/hypr"
 a="${ACCENT#\#}"; m="${MUTED#\#}"
@@ -202,6 +211,7 @@ fi
 echo "Тема применена: $TITLE"
 echo "  quickshell  — live (theme.json)"
 echo "  kitty       — live (SIGUSR1)"
+echo "  cmus        — live (ANSI / cmus-remote)"
 echo "  hyprland    — live (hyprctl reload)"
 echo "  zed         — live (\"$zed_name\")"
 echo "  yazi        — перезапусти yazi"
