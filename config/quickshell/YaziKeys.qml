@@ -165,8 +165,26 @@ Singleton {
         }
     }
 
+    // Правка встроенного бинда: создаём/обновляем своё переопределение
+    function overrideDefault(onKeys, run, desc) {
+        for (let i = 0; i < root.userEntries.length; i++) {
+            if (root.userEntries[i].on === onKeys) {
+                if (run !== undefined && run !== root.userEntries[i].run)
+                    root.setRun(i, run)
+                if (desc !== undefined && desc !== root.userEntries[i].desc)
+                    root.setDesc(i, desc)
+                return
+            }
+        }
+        root.add(onKeys, run, desc)
+    }
+
     function combine() {
         const out = []
+        // какие клавиши уже переопределены своими
+        const mine = {}
+        for (let i = 0; i < root.userEntries.length; i++)
+            mine["" + root.userEntries[i].on] = true
         // сначала свои бинды, чтобы были наверху
         for (let i = 0; i < root.userEntries.length; i++) {
             const u = root.userEntries[i]
@@ -179,6 +197,8 @@ Singleton {
         }
         for (let i = 0; i < root.defaultEntries.length; i++) {
             const d = root.defaultEntries[i]
+            if (mine["" + d.on])
+                continue
             out.push({ source: "default", on: d.on, run: d.run, desc: d.desc })
         }
         root.entries = out

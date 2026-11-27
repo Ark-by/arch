@@ -1244,7 +1244,7 @@ Item {
 
                         Rectangle {
                             id: yRunBox
-                            visible: mine
+                            visible: true
                             anchors.left: yOnBox.right
                             anchors.leftMargin: 6
                             anchors.right: yRemove.left
@@ -1266,7 +1266,9 @@ Item {
                                 text: modelData.run
                                 selectByMouse: true
                                 clip: true
-                                onEditingFinished: YaziKeys.setRun(modelData.index, text)
+                                onEditingFinished: parent.mine
+                                    ? YaziKeys.setRun(modelData.index, text)
+                                    : YaziKeys.overrideDefault(modelData.on, text, modelData.desc)
                             }
                         }
 
@@ -1327,7 +1329,7 @@ Item {
                 }
 
                 Text {
-                    text: "Keys (space separated, e.g. g s)"
+                    text: "Keys (space separated, e.g. g s). Editing a built-in creates your override."
                     color: Theme.fg
                     font.pixelSize: 12
                 }
