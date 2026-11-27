@@ -8,6 +8,7 @@ Singleton {
     id: root
 
     readonly property string path: Quickshell.env("HOME") + "/.config/zed/keymap.json"
+    readonly property string defaultsPath: Quickshell.env("HOME") + "/.config/quickshell/defaults/zed-keymap.json"
 
     readonly property var actions: [
         "editor::Save", "editor::SaveAs", "editor::Copy", "editor::Cut", "editor::Paste",
@@ -26,6 +27,7 @@ Singleton {
     property var data: []
     property var entries: []
     property string status: ""
+    property bool showingDefaults: false
     property bool dirty: false
 
     function reload() {
@@ -171,33 +173,53 @@ Singleton {
         return out.replace(/,\s*([}\]])/g, "$1")
     }
 
+    function _parseText(raw) {
+        if (("" + raw).trim() === "")
+            return false
+        let parsed = null
+        try {
+            parsed = JSON.parse(raw)
+        } catch (e1) {
+            try {
+                parsed = JSON.parse(root.stripJsonc(raw))
+            } catch (e2) {
+                root.status = "parse error: " + e1
+                return false
+            }
+        }
+        root.data = Array.isArray(parsed) ? parsed : []
+        root.flatten()
+        return true
+    }
+
     Process {
         id: reader
         command: ["cat", root.path]
         stdout: StdioCollector {
             onStreamFinished: {
-                const raw = "" + this.text
-                if (raw.trim() === "") {
-                    root.data = []
-                    root.entries = []
-                    root.status = "keymap.json is empty — Save creates it"
+                if (!root._parseText("" + this.text)) {
+                    defaultsReader.running = true
                     return
                 }
-                let parsed = null
-                try {
-                    parsed = JSON.parse(raw)
-                } catch (e1) {
-                    try {
-                        parsed = JSON.parse(root.stripJsonc(raw))
-                    } catch (e2) {
-                        root.status = "parse error: " + e1
-                        return
-                    }
-                }
-                root.data = Array.isArray(parsed) ? parsed : []
-                root.flatten()
+                root.showingDefaults = false
                 root.dirty = false
                 root.status = "loaded " + root.entries.length + " bindings"
+            }
+        }
+    }
+
+    Process {
+        id: defaultsReader
+        command: ["cat", root.defaultsPath]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (root._parseText("" + this.text)) {
+                    root.showingDefaults = true
+                    root.status = "showing Zed defaults — Save writes keymap.json"
+                } else {
+                    root.status = "keymap.json and defaults are both empty"
+                }
+                root.dirty = false
             }
         }
     }

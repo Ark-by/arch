@@ -821,10 +821,14 @@ Item {
                     bottomPadding: 6
                 }
 
-                Repeater {
+                ListView {
+                    width: col.width
+                    height: Math.min(380, Math.max(140, ZedKeys.entries.length * 60))
+                    clip: true
+                    spacing: 2
                     model: ZedKeys.entries
 
-                    Rectangle {
+                    delegate: Rectangle {
                         required property var modelData
                         required property int index
 
@@ -1177,10 +1181,14 @@ Item {
                     bottomPadding: 6
                 }
 
-                Repeater {
+                ListView {
+                    width: col.width
+                    height: Math.min(380, Math.max(140, YaziKeys.entries.length * 86))
+                    clip: true
+                    spacing: 2
                     model: YaziKeys.entries
 
-                    Rectangle {
+                    delegate: Rectangle {
                         required property var modelData
                         required property int index
 
