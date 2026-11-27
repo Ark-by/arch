@@ -28,6 +28,7 @@ Singleton {
     property var entries: []
     property string status: ""
     property bool showingDefaults: false
+    property bool loaded: false
     property bool dirty: false
 
     function reload() {
@@ -115,6 +116,10 @@ Singleton {
     }
 
     function save() {
+        if (!root.loaded) {
+            root.status = "still loading — try Save again in a second"
+            return
+        }
         writer.payload = JSON.stringify(root.data, null, 2) + "\n"
         writer.running = true
     }
@@ -202,6 +207,7 @@ Singleton {
                     return
                 }
                 root.showingDefaults = false
+                root.loaded = true
                 root.dirty = false
                 root.status = "loaded " + root.entries.length + " bindings"
             }
@@ -215,6 +221,7 @@ Singleton {
             onStreamFinished: {
                 if (root._parseText("" + this.text)) {
                     root.showingDefaults = true
+                    root.loaded = true
                     root.status = "showing Zed defaults — Save writes keymap.json"
                 } else {
                     root.status = "keymap.json and defaults are both empty"

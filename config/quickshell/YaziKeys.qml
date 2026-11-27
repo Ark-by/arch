@@ -274,7 +274,14 @@ Singleton {
         command: ["cat", root.defaultsPath]
         stdout: StdioCollector {
             onStreamFinished: {
-                root._parseText(this.text)
+                const raw = "" + this.text
+                if (raw.trim() === "") {
+                    root.showingDefaults = true
+                    root.dirty = false
+                    root.status = "defaults not found: " + root.defaultsPath
+                    return
+                }
+                root._parseText(raw)
                 root.showingDefaults = true
                 root.dirty = false
                 root.status = "showing yazi defaults — Save writes keymap.toml"

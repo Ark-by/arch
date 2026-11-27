@@ -20,6 +20,8 @@ Singleton {
     property var entries: []
     property string status: ""
     property bool dirty: false
+    property bool loaded: false
+    property bool fileMissing: false
 
     signal changed()
 
@@ -43,6 +45,7 @@ Singleton {
     readonly property var reKitty: /^(\s*)(#\s*)?map\s+(\S+)\s+(.+)$/
 
     function reload() {
+        root.loaded = false
         reader.running = true
     }
 
@@ -155,6 +158,14 @@ Singleton {
     }
 
     function save() {
+        if (!root.loaded) {
+            root.status = "still loading — try Save again in a second"
+            return
+        }
+        if (root.lines.length === 0 && !root.fileMissing) {
+            root.status = "refusing to write an empty file"
+            return
+        }
         writer.payload = root.lines.filter(l => l !== "").join("\n") + "\n"
         writer.target = root.target().path
         writer.running = true
@@ -168,6 +179,8 @@ Singleton {
                 const text = ("" + this.text).replace(/\s*$/, "")
                 root.lines = text === "" ? [] : text.split("\n")
                 root.parse()
+                root.fileMissing = (text === "")
+                root.loaded = true
                 root.dirty = false
             }
         }

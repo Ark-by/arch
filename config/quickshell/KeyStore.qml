@@ -16,10 +16,12 @@ Singleton {
     property var binds: []
     property string status: ""
     property bool dirty: false
+    property bool loaded: false
 
     signal changed()
 
     function reload() {
+        root.loaded = false
         reader.running = true
     }
 
@@ -83,6 +85,10 @@ Singleton {
     }
 
     function save() {
+        if (!root.loaded) {
+            root.status = "still loading — try Save again in a second"
+            return
+        }
         const text = root.lines.filter(l => l !== "").join("\n") + "\n"
         writer.payload = text
         writer.running = true
@@ -96,6 +102,7 @@ Singleton {
                 const text = ("" + this.text).replace(/\s*$/, "")
                 root.lines = text.split("\n")
                 root.parse()
+                root.loaded = true
                 root.dirty = false
                 root.status = "loaded " + root.binds.length + " binds"
                 root.changed()
