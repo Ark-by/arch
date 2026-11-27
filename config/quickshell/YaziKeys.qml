@@ -75,16 +75,26 @@ Singleton {
         return root._quote(v)
     }
 
+    function _hasBlockHeaders() {
+        for (let i = 0; i < root.lines.length; i++)
+            if (("" + root.lines[i]).trim() === "[[mgr.prepend_keymap]]")
+                return true
+        return false
+    }
+
     function parse() {
         root.entries = []
         root.mode = "none"
 
         const b = root.lines.indexOf(root.beginMark)
         const e = root.lines.indexOf(root.endMark)
-        if (b >= 0 && e > b) {
+        const hasMarkers = b >= 0 && e > b
+        if (hasMarkers || root._hasBlockHeaders()) {
             root.mode = "block"
+            const from = hasMarkers ? b + 1 : 0
+            const to = hasMarkers ? e : root.lines.length
             let cur = null
-            for (let i = b + 1; i < e; i++) {
+            for (let i = from; i < to; i++) {
                 const t = ("" + root.lines[i]).trim()
                 if (t === "[[mgr.prepend_keymap]]") {
                     if (cur)
@@ -94,15 +104,22 @@ Singleton {
                 }
                 if (!cur)
                     continue
-                if (t.indexOf("on =") === 0) {
+                let m = t.match(/^on\s*=\s*(.+)$/i)
+                if (m) {
                     cur.onLine = i
-                    cur.on = root._displayOn(t.substring(4))
-                } else if (t.indexOf("run =") === 0) {
+                    cur.on = root._displayOn(m[1])
+                    continue
+                }
+                m = t.match(/^run\s*=\s*(.+)$/i)
+                if (m) {
                     cur.runLine = i
-                    cur.run = root._displayRun(t.substring(5))
-                } else if (t.indexOf("desc =") === 0) {
+                    cur.run = root._displayRun(m[1])
+                    continue
+                }
+                m = t.match(/^desc\s*=\s*(.+)$/i)
+                if (m) {
                     cur.descLine = i
-                    cur.desc = root._unquote(t.substring(6))
+                    cur.desc = root._unquote(m[1])
                 }
             }
             if (cur)
@@ -231,7 +248,9 @@ Singleton {
             if (desc && desc !== "")
                 block.push("desc = " + root._quote(desc))
             block.push("")
-            root.lines.splice(e, 0, ...block)
+            if (e < 0)
+                root.lines.push("")
+            root.lines.splice(e < 0 ? root.lines.length : e, 0, ...block)
         } else {
             root.lines = ["[mgr]", "keymap = [", line, "]"]
         }
@@ -264,6 +283,10 @@ Singleton {
                 root.showingDefaults = false
                 root._parseText(raw)
                 root.dirty = false
+                if (root.entries.length === 0) {
+                    defaultsReader.running = true
+                    return
+                }
                 root.status = "loaded " + root.entries.length + " bindings"
             }
         }
