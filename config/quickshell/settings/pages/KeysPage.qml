@@ -1171,60 +1171,50 @@ Item {
                     bottomPadding: 4
                 }
 
-                Text {
-                    visible: YaziKeys.entries.length === 0
-                    width: parent.width
-                    text: "No managed bindings yet. Add on/run below, press Add, then Save — the block is appended to keymap.toml."
-                    color: Theme.muted
-                    font.pixelSize: 11
-                    wrapMode: Text.Wrap
-                    bottomPadding: 6
-                }
-
                 ListView {
                     width: col.width
-                    height: Math.min(380, Math.max(140, YaziKeys.entries.length * 86))
+                    height: Math.min(420, Math.max(160, YaziKeys.entries.length * 44))
                     clip: true
                     spacing: 2
                     model: YaziKeys.entries
 
                     delegate: Rectangle {
                         required property var modelData
-                        required property int index
 
-                        width: col.width
-                        height: 84
+                        readonly property bool mine: modelData.source === "user"
+
+                        width: ListView.view.width
+                        height: 40
                         radius: 8
-                        color: Qt.alpha(Theme.surface, 0.4)
+                        color: mine ? Qt.alpha(Theme.surface, 0.45) : Qt.alpha(Theme.surface, 0.18)
                         border.color: Theme.border
                         border.width: 1
 
                         Text {
+                            id: yBadge
                             anchors.left: parent.left
-                            anchors.leftMargin: 10
-                            anchors.top: parent.top
-                            anchors.topMargin: 5
-                            text: "on"
-                            color: Theme.muted
-                            font.pixelSize: 10
+                            anchors.leftMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 50
+                            text: mine ? "yours" : "built-in"
+                            color: mine ? Theme.accent : Theme.muted
+                            font.pixelSize: 9
                         }
 
                         Rectangle {
-                            id: yOn
-                            anchors.left: parent.left
-                            anchors.leftMargin: 10
-                            anchors.right: yRemove.left
-                            anchors.rightMargin: 8
-                            anchors.top: parent.top
-                            anchors.topMargin: 18
-                            height: 24
+                            id: yOnBox
+                            visible: mine
+                            anchors.left: yBadge.right
+                            anchors.leftMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 130
+                            height: 26
                             radius: 6
                             color: Qt.alpha(Theme.bg, 0.6)
-                            border.color: yOnInput.activeFocus ? Theme.accent : Theme.border
+                            border.color: Theme.border
                             border.width: 1
 
                             TextInput {
-                                id: yOnInput
                                 anchors.fill: parent
                                 anchors.margins: 5
                                 verticalAlignment: TextInput.AlignVCenter
@@ -1234,26 +1224,39 @@ Item {
                                 text: modelData.on
                                 selectByMouse: true
                                 clip: true
-                                onEditingFinished: YaziKeys.setOn(index, text)
+                                onEditingFinished: YaziKeys.setOn(modelData.index, text)
                             }
                         }
 
+                        Text {
+                            id: yOnLabel
+                            visible: !mine
+                            anchors.left: yBadge.right
+                            anchors.leftMargin: 4
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 130
+                            text: modelData.on
+                            color: Theme.muted
+                            font.pixelSize: 11
+                            font.family: "JetBrainsMono Nerd Font"
+                            elide: Text.ElideRight
+                        }
+
                         Rectangle {
-                            id: yRun
-                            anchors.left: parent.left
-                            anchors.leftMargin: 10
+                            id: yRunBox
+                            visible: mine
+                            anchors.left: yOnBox.right
+                            anchors.leftMargin: 6
                             anchors.right: yRemove.left
-                            anchors.rightMargin: 8
-                            anchors.top: yOn.bottom
-                            anchors.topMargin: 4
-                            height: 24
+                            anchors.rightMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            height: 26
                             radius: 6
                             color: Qt.alpha(Theme.bg, 0.6)
-                            border.color: yRunInput.activeFocus ? Theme.accent : Theme.border
+                            border.color: Theme.border
                             border.width: 1
 
                             TextInput {
-                                id: yRunInput
                                 anchors.fill: parent
                                 anchors.margins: 5
                                 verticalAlignment: TextInput.AlignVCenter
@@ -1263,18 +1266,33 @@ Item {
                                 text: modelData.run
                                 selectByMouse: true
                                 clip: true
-                                onEditingFinished: YaziKeys.setRun(index, text)
+                                onEditingFinished: YaziKeys.setRun(modelData.index, text)
                             }
+                        }
+
+                        Text {
+                            id: yRunLabel
+                            visible: !mine
+                            anchors.left: yOnLabel.right
+                            anchors.leftMargin: 6
+                            anchors.right: yRemove.left
+                            anchors.rightMargin: 6
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: modelData.run + (modelData.desc !== "" ? "  —  " + modelData.desc : "")
+                            color: Theme.muted
+                            font.pixelSize: 11
+                            font.family: "JetBrainsMono Nerd Font"
+                            elide: Text.ElideRight
                         }
 
                         Rectangle {
                             id: yRemove
+                            visible: mine
                             anchors.right: parent.right
                             anchors.rightMargin: 8
-                            anchors.top: parent.top
-                            anchors.topMargin: 18
-                            width: 26
-                            height: 26
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 24
+                            height: 24
                             radius: 6
                             color: yRemoveMouse.containsMouse ? Qt.alpha(Theme.error, 0.25) : "transparent"
                             border.color: Theme.border
@@ -1292,7 +1310,7 @@ Item {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: YaziKeys.remove(index)
+                                onClicked: YaziKeys.remove(modelData.index)
                             }
                         }
                     }
@@ -1301,7 +1319,7 @@ Item {
                 Item { width: 1; height: 12 }
 
                 Text {
-                    text: "Add a yazi binding"
+                    text: "Add your own binding"
                     color: Theme.accent
                     font.pixelSize: 14
                     font.bold: true
