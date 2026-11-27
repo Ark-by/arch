@@ -3,30 +3,27 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Бинды yazi: в списке показываются штатные (defaults) и пользовательские.
-// Редактируются только пользовательские; Save пишет ~/.config/yazi/keymap.toml.
+// Бинды yazi как в Zed: единый редактируемый список.
+// База — штатный пресет, поверх накладываются записи из ~/.config/yazi/keymap.toml.
+// Save записывает весь список в файл (формат [mgr] keymap = [ ... ]).
 Singleton {
     id: root
 
     readonly property string path: Quickshell.env("HOME") + "/.config/yazi/keymap.toml"
     readonly property string defaultsPath: Quickshell.env("HOME") + "/.config/quickshell/defaults/yazi-keymap.toml"
-    readonly property string beginMark: "# >>> ark-settings:keymap >>>"
-    readonly property string endMark: "# <<< ark-settings:keymap <<<"
 
-    property var userLines: []
-    property var userEntries: []
-    property var defaultEntries: []
     property var entries: []
-    property string mode: "none"
+    property var userIds: []
     property string status: ""
     property bool loaded: false
-    property bool defaultsLoaded: false
     property bool dirty: false
 
     readonly property var reInline: /^\s*\{\s*on\s*=\s*(.+?),\s*run\s*=\s*(.+?)(?:,\s*desc\s*=\s*"([^"]*)")?\s*\}\s*,?\s*$/
 
     function reload() {
         root.loaded = false
+        root.entries = []
+        defaultsReader.running = true
         reader.running = true
     }
 
@@ -68,250 +65,107 @@ Singleton {
         return root._quote(v)
     }
 
-    function _hasHeaders(lines) {
-        for (let i = 0; i < lines.length; i++)
-            if (("" + lines[i]).trim() === "[[mgr.prepend_keymap]]")
-                return true
-        return false
-    }
+    // Возвращает массив { on, run, desc } из любого из форматов
+    function parseEntries(lines, onlyMgr) {
+        const out = []
+        let inMgr = !onlyMgr
+        let inBlock = false
+        for (let i = 0; i < lines.length; i++) {
+            const t = ("" + lines[i]).trim()
+            if (t === "[mgr]") { inMgr = true; continue }
+            if (t.charAt(0) === "[" && t !== "[mgr]")
+                inMgr = false
+            if (t === "[[mgr.prepend_keymap]]") { inBlock = true; continue }
+            if (t.charAt(0) === "[" && t !== "[[mgr.prepend_keymap]]") inBlock = false
+            if (t === "" && inBlock) continue
 
-    // Разбор пользовательского файла
-    function parseUser() {
-        root.userEntries = []
-        root.mode = "none"
-        const lines = root.userLines
-        const b = lines.indexOf(root.beginMark)
-        const e = lines.indexOf(root.endMark)
-        const hasMarkers = b >= 0 && e > b
+            const m = ("" + lines[i]).match(root.reInline)
+            if (m && inMgr) {
+                out.push({ on: root._display(m[1]), run: root._display(m[2]), desc: m[3] || "" })
+                continue
+            }
 
-        if (hasMarkers || root._hasHeaders(lines)) {
-            root.mode = "block"
-            const from = hasMarkers ? b + 1 : 0
-            const to = hasMarkers ? e : lines.length
-            let cur = null
-            for (let i = from; i < to; i++) {
-                const t = ("" + lines[i]).trim()
-                if (t === "[[mgr.prepend_keymap]]") {
-                    if (cur)
-                        root.userEntries.push(cur)
-                    cur = {
-                        index: root.userEntries.length,
-                        onLine: -1, runLine: -1, descLine: -1,
-                        on: "", run: "", desc: ""
-                    }
+            if (inBlock) {
+                const mo = t.match(/^on\s*=\s*(.+)$/i)
+                const mr = t.match(/^run\s*=\s*(.+)$/i)
+                const md = t.match(/^desc\s*=\s*(.+)$/i)
+                if (mo) {
+                    out.push({ on: root._display(mo[1]), run: "", desc: "" })
                     continue
                 }
-                if (!cur)
-                    continue
-                let m = t.match(/^on\s*=\s*(.+)$/i)
-                if (m) { cur.onLine = i; cur.on = root._display(m[1]); continue }
-                m = t.match(/^run\s*=\s*(.+)$/i)
-                if (m) { cur.runLine = i; cur.run = root._display(m[1]); continue }
-                m = t.match(/^desc\s*=\s*(.+)$/i)
-                if (m) { cur.descLine = i; cur.desc = root._unquote(m[1]) }
-            }
-            if (cur)
-                root.userEntries.push(cur)
-            return
-        }
-
-        let inMgr = false
-        for (let i = 0; i < lines.length; i++) {
-            const t = ("" + lines[i]).trim()
-            if (t === "[mgr]") { inMgr = true; continue }
-            if (t.charAt(0) === "[" && t !== "[mgr]")
-                inMgr = false
-            if (!inMgr)
-                continue
-            const m = ("" + lines[i]).match(root.reInline)
-            if (!m)
-                continue
-            root.userEntries.push({
-                index: root.userEntries.length,
-                lineIndex: i,
-                on: root._display(m[1]),
-                run: root._display(m[2]),
-                desc: m[3] || ""
-            })
-        }
-        if (root.userEntries.length > 0)
-            root.mode = "inline"
-        else if (lines.length > 0)
-            root.mode = "inline"
-    }
-
-    function parseDefaults(raw) {
-        root.defaultEntries = []
-        const text = ("" + raw).replace(/\s*$/, "")
-        if (text === "")
-            return
-        const lines = text.split("\n")
-        let inMgr = false
-        for (let i = 0; i < lines.length; i++) {
-            const t = ("" + lines[i]).trim()
-            if (t === "[mgr]") { inMgr = true; continue }
-            if (t.charAt(0) === "[" && t !== "[mgr]")
-                inMgr = false
-            if (!inMgr)
-                continue
-            const m = ("" + lines[i]).match(root.reInline)
-            if (!m)
-                continue
-            root.defaultEntries.push({
-                on: root._display(m[1]),
-                run: root._display(m[2]),
-                desc: m[3] || ""
-            })
-        }
-    }
-
-    // Правка встроенного бинда: создаём/обновляем своё переопределение
-    function overrideDefault(onKeys, run, desc) {
-        for (let i = 0; i < root.userEntries.length; i++) {
-            if (root.userEntries[i].on === onKeys) {
-                if (run !== undefined && run !== root.userEntries[i].run)
-                    root.setRun(i, run)
-                if (desc !== undefined && desc !== root.userEntries[i].desc)
-                    root.setDesc(i, desc)
-                return
+                if (mr && out.length > 0)
+                    out[out.length - 1].run = root._display(mr[1])
+                else if (md && out.length > 0)
+                    out[out.length - 1].desc = root._unquote(md[1])
             }
         }
-        root.add(onKeys, run, desc)
+        return out
     }
 
     function combine() {
         const out = []
-        // какие клавиши уже переопределены своими
         const mine = {}
         for (let i = 0; i < root.userEntries.length; i++)
             mine["" + root.userEntries[i].on] = true
-        // сначала свои бинды, чтобы были наверху
-        for (let i = 0; i < root.userEntries.length; i++) {
-            const u = root.userEntries[i]
-            out.push({
-                source: "user",
-                index: u.index,
-                on: u.on, run: u.run, desc: u.desc,
-                lineIndex: u.lineIndex, onLine: u.onLine, runLine: u.runLine, descLine: u.descLine
-            })
-        }
         for (let i = 0; i < root.defaultEntries.length; i++) {
             const d = root.defaultEntries[i]
-            if (mine["" + d.on])
-                continue
-            out.push({ source: "default", on: d.on, run: d.run, desc: d.desc })
+            if (mine["" + d.on]) {
+                let u = null
+                for (let k = 0; k < root.userEntries.length; k++)
+                    if (root.userEntries[k].on === d.on) { u = root.userEntries[k]; break }
+                out.push({ on: d.on, run: u ? u.run : d.run, desc: u && u.desc !== "" ? u.desc : d.desc })
+            } else {
+                out.push({ on: d.on, run: d.run, desc: d.desc })
+            }
+        }
+        for (let i = 0; i < root.userEntries.length; i++) {
+            const u = root.userEntries[i]
+            let found = false
+            for (let j = 0; j < out.length; j++)
+                if (out[j].on === u.on) { found = true; break }
+            if (!found)
+                out.push({ on: u.on, run: u.run, desc: u.desc })
         }
         root.entries = out
-        root.status = "yours " + root.userEntries.length + " · built-in " + root.defaultEntries.length
+        root.loaded = true
+        root.status = out.length + " bindings (default + yours)"
     }
 
-    function _rebuildInline(index) {
-        const e = root.userEntries[index]
-        if (!e || e.lineIndex === undefined)
-            return
-        const indent = ("" + root.userLines[e.lineIndex]).match(/^\s*/)[0]
-        let line = indent + "{ on = " + root._onToml(e.on) + ", run = " + root._quote(e.run)
-        if (e.desc !== "")
-            line += ", desc = " + root._quote(e.desc)
-        line += " },"
-        root.userLines[e.lineIndex] = line
+    property var defaultEntries: []
+    property var userEntries: []
+
+    function setOn(index, value) {
+        if (!root.entries[index]) return
+        root.entries[index].on = value
+        root.entries = root.entries.slice()
         root.dirty = true
     }
 
-    function setOn(index, value) {
-        const e = root.userEntries[index]
-        if (!e)
-            return
-        e.on = value
-        if (root.mode === "inline")
-            root._rebuildInline(index)
-        else if (e.onLine >= 0) {
-            root.userLines[e.onLine] = "on = " + root._onToml(value)
-            root.dirty = true
-        }
-        root.combine()
-    }
-
     function setRun(index, value) {
-        const e = root.userEntries[index]
-        if (!e)
-            return
-        e.run = value
-        if (root.mode === "inline")
-            root._rebuildInline(index)
-        else if (e.runLine >= 0) {
-            root.userLines[e.runLine] = "run = " + root._quote(value)
-            root.dirty = true
-        }
-        root.combine()
+        if (!root.entries[index]) return
+        root.entries[index].run = value
+        root.entries = root.entries.slice()
+        root.dirty = true
     }
 
     function setDesc(index, value) {
-        const e = root.userEntries[index]
-        if (!e)
-            return
-        e.desc = value
-        if (root.mode === "inline")
-            root._rebuildInline(index)
-        else if (e.descLine >= 0) {
-            root.userLines[e.descLine] = "desc = " + root._quote(value)
-            root.dirty = true
-        }
-        root.combine()
+        if (!root.entries[index]) return
+        root.entries[index].desc = value
+        root.entries = root.entries.slice()
+        root.dirty = true
     }
 
     function remove(index) {
-        const e = root.userEntries[index]
-        if (!e)
-            return
-        if (root.mode === "inline") {
-            root.userLines.splice(e.lineIndex, 1)
-        } else {
-            const from = Math.min(e.onLine, e.runLine, e.descLine >= 0 ? e.descLine : e.onLine)
-            const to = Math.max(e.onLine, e.runLine, e.descLine)
-            const start = from > 0 ? from - 1 : from
-            root.userLines.splice(start, to - start + 1)
-        }
-        root.userLines = root.userLines.slice()
-        root.parseUser()
-        root.combine()
+        root.entries.splice(index, 1)
+        root.entries = root.entries.slice()
         root.dirty = true
     }
 
     function add(on, run, desc) {
         if (("" + on).trim() === "" || ("" + run).trim() === "")
             return
-        const lines = root.userLines.slice()
-        if (root.mode === "block") {
-            const idx = lines.indexOf(root.endMark)
-            const block = ["[[mgr.prepend_keymap]]", "on = " + root._onToml(on), "run = " + root._quote(run)]
-            if (desc && desc !== "")
-                block.push("desc = " + root._quote(desc))
-            block.push("")
-            const at = idx < 0 ? lines.length : idx
-            for (let i = block.length - 1; i >= 0; i--)
-                lines.splice(at, 0, block[i])
-        } else {
-            let line = "{ on = " + root._onToml(on) + ", run = " + root._quote(run)
-            if (desc && desc !== "")
-                line += ", desc = " + root._quote(desc)
-            line += " },"
-            if (lines.length === 0) {
-                lines.push("[mgr]")
-                lines.push("keymap = [")
-            }
-            let last = -1
-            for (let i = 0; i < root.userEntries.length; i++)
-                if (root.userEntries[i].lineIndex !== undefined)
-                    last = Math.max(last, root.userEntries[i].lineIndex)
-            if (last >= 0)
-                lines.splice(last + 1, 0, line)
-            else
-                lines.push(line)
-        }
-        root.userLines = lines
-        root.parseUser()
-        root.combine()
+        root.entries.push({ on: on, run: run, desc: desc || "" })
+        root.entries = root.entries.slice()
         root.dirty = true
     }
 
@@ -320,7 +174,17 @@ Singleton {
             root.status = "still loading — try Save again"
             return
         }
-        writer.payload = root.userLines.join("\n") + "\n"
+        const lines = ["[mgr]", "keymap = ["]
+        for (let i = 0; i < root.entries.length; i++) {
+            const e = root.entries[i]
+            let line = "\t{ on = " + root._onToml(e.on) + ", run = " + root._quote(e.run)
+            if (e.desc !== "")
+                line += ", desc = " + root._quote(e.desc)
+            line += " },"
+            lines.push(line)
+        }
+        lines.push("]")
+        writer.payload = lines.join("\n") + "\n"
         writer.running = true
     }
 
@@ -329,14 +193,11 @@ Singleton {
         command: ["cat", root.path]
         stdout: StdioCollector {
             onStreamFinished: {
-                const raw = "" + this.text
-                const text = raw.replace(/\s*$/, "")
-                root.userLines = text === "" ? [] : text.split("\n")
-                root.parseUser()
-                root.loaded = true
-                root.combine()
-                if (root.defaultEntries.length === 0)
-                    defaultsReader.running = true
+                const text = ("" + this.text).replace(/\s*$/, "")
+                const lines = text === "" ? [] : text.split("\n")
+                root.userEntries = root.parseEntries(lines, false)
+                if (root.defaultEntries.length > 0)
+                    root.combine()
             }
         }
     }
@@ -346,11 +207,15 @@ Singleton {
         command: ["cat", root.defaultsPath]
         stdout: StdioCollector {
             onStreamFinished: {
-                root.parseDefaults(this.text)
-                root.defaultsLoaded = true
-                root.combine()
-                if (root.defaultEntries.length === 0)
+                const text = ("" + this.text).replace(/\s*$/, "")
+                const lines = text === "" ? [] : text.split("\n")
+                root.defaultEntries = root.parseEntries(lines, true)
+                if (root.defaultEntries.length === 0) {
+                    root.combine()
                     root.status = "defaults not found: " + root.defaultsPath
+                    return
+                }
+                root.combine()
             }
         }
     }
@@ -365,8 +230,7 @@ Singleton {
                 return
             }
             root.dirty = false
-            root.status = "saved"
-            root.reload()
+            root.status = "saved " + root.entries.length + " bindings"
         }
     }
 
