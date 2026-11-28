@@ -5,7 +5,7 @@ import Quickshell.Io
 
 Singleton {
     id: root
-    property string panel: ""        // "", "launcher", "wallpaper", "themes", "power", "shortcuts"
+    property string panel: ""        // "", "launcher", "power", "shortcuts", "settings"
     property string wallpaper: ""
     readonly property string home: Quickshell.env("HOME")
 
@@ -19,6 +19,8 @@ Singleton {
 
     FileView {
         path: root.home + "/.config/quickshell/wallpaper.txt"
+        watchChanges: true
+        onFileChanged: reload()
         onLoaded: root.wallpaper = text().trim()
     }
 }

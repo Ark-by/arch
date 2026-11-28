@@ -72,17 +72,11 @@ Variants {
                 hoverColor: Theme.fg
                 onClicked: UiState.toggle("shortcuts")
             }
-            IconButton {                      // выбор обоев (картинка)
-                text: "\uf03e"
+            IconButton {                      // настройки: темы и обои
+                text: "\uf013"
                 baseColor: Theme.accent
                 hoverColor: Theme.fg
-                onClicked: UiState.toggle("wallpaper")
-            }
-            IconButton {                      // смена темы (кисть)
-                text: "\uf1fc"
-                baseColor: Theme.accent
-                hoverColor: Theme.fg
-                onClicked: UiState.toggle("themes")
+                onClicked: UiState.toggle("settings")
             }
             IconButton {                      // раскладка клавиатуры
                             text: KbLayout.code

@@ -1,7 +1,7 @@
 -- =====================================================================
 --  КЛАВИШИ HYPRLAND
 --  Формат:  bind("клавиши", действие, "Раздел: Описание")
---  Описание автоматически попадает в окно справки (SUPER+F1).
+--  Описание автоматически попадает в окно справки (SUPER+A).
 --  Необязательно: "Раздел: Описание | Как показать клавиши"
 --  Клавиша без описания в справке не появится.
 -- =====================================================================
@@ -32,9 +32,10 @@ bind(mainMod .. " + S", hl.dsp.exec_cmd("kitty -e micro"), "Приложения
 
 -- Меню панели (Quickshell)
 bind(mainMod .. " + R",  hl.dsp.exec_cmd("qs ipc call ui launcher"),   "Меню панели: Меню приложений")
-bind(mainMod .. " + W",  hl.dsp.exec_cmd("qs ipc call ui wallpapers"), "Меню панели: Выбор обоев")
-bind(mainMod .. " + T",  hl.dsp.exec_cmd("qs ipc call ui themes"),     "Меню панели: Смена темы")
+bind(mainMod .. " + W",  hl.dsp.exec_cmd("qs ipc call ui wallpapers"), "Меню панели: Настройки — обои")
+bind(mainMod .. " + T",  hl.dsp.exec_cmd("qs ipc call ui themes"),     "Меню панели: Настройки — темы")
 bind(mainMod .. " + A", hl.dsp.exec_cmd("qs ipc call ui shortcuts"),   "Меню панели: Эта справка")
+bind(mainMod .. " + comma", hl.dsp.exec_cmd("qs ipc call ui settings"), "Меню панели: Настройки")
 
 -- Окна
 bind(mainMod .. " + C", hl.dsp.window.close(),                        "Окна: Закрыть окно")
