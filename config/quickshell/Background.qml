@@ -16,8 +16,12 @@ Variants {
         Image {
             anchors.fill: parent
             source: UiState.wallpaper ? "file://" + UiState.wallpaper : ""
+            // декодируем сразу под ширину экрана: 4K-файл не тратит память и время
+            sourceSize.width: Math.round(parent.width)
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
+            cache: true
+            smooth: true
         }
     }
 }

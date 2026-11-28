@@ -15,7 +15,8 @@
 #         extras/udev/*.rules           -> /etc/udev/rules.d/    (sudo, если есть)
 #    6. включает greetd + hyprlogin как экран входа (vt1);
 #    7. проверяет shell (fish), fastfetch, команды Hyprland;
-#    8. печатает отчёт: сделано / предупреждения / требует рук.
+#    8. убирает base-devel, сирот и кэш пакетов;
+#    9. печатает отчёт: сделано / предупреждения / требует рук.
 #
 #  Запуск: из корня репозитория, обычным пользователем (не root).
 #    ./install-v2.sh --dry-run
@@ -36,6 +37,7 @@ DO_CONFIG=1
 DO_EXTRAS=1
 DO_GREETER=1
 DO_RUSTDESK=1
+DO_CLEANUP=1
 DRY_RUN=0
 ASSUME_YES=0
 
@@ -83,6 +85,7 @@ usage() {
   --no-extras      не разворачивать extras/
   --no-ly          не настраивать менеджер входа (greetd + hyprlogin)
   --no-rustdesk    не настраивать RustDesk (uinput, портал)
+  --no-cleanup     не убирать base-devel, сирот и кэш пакетов
   -h, --help       эта справка
 
 Запускать обычным пользователем, не через sudo.
@@ -100,6 +103,7 @@ while (($#)); do
         --no-extras)   DO_EXTRAS=0 ;;
         --no-ly)       DO_GREETER=0 ;;
         --no-rustdesk) DO_RUSTDESK=0 ;;
+        --no-cleanup)  DO_CLEANUP=0 ;;
         -h|--help)     usage; exit 0 ;;
         *)             die "Неизвестная опция: $1 (см. --help)" ;;
     esac
@@ -660,10 +664,85 @@ if command -v hyprland >/dev/null 2>&1; then
 fi
 
 # --- фактические списки пакетов ---
-pacman -Qqe > "$SCRIPT_DIR/packages-current.txt" 2>/dev/null && \
-    info "Фактический список пакетов: packages-current.txt"
-pacman -Qqm > "$SCRIPT_DIR/foreign-current.txt" 2>/dev/null && \
-    info "Пакеты не из репозиториев: foreign-current.txt (сверьте с aur.txt)"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/arch-dotfiles"
+mkdir -p "$STATE_DIR"
+pacman -Qqe > "$STATE_DIR/packages-current.txt" 2>/dev/null && \
+    info "Фактический список пакетов: $STATE_DIR/packages-current.txt"
+pacman -Qqm > "$STATE_DIR/foreign-current.txt" 2>/dev/null && \
+    info "Пакеты не из репозиториев: $STATE_DIR/foreign-current.txt (сверьте с aur.txt)"
+
+# =============================================================================
+# 6.5 Уборка: сборочные пакеты, сироты, кэш
+# =============================================================================
+# Пакеты, нужные только для сборки AUR: yay поставит их снова, когда понадобится.
+# pacman/sudo/util-linux/grep/sed сюда НЕ входят — это часть системы.
+BUILD_TOOLS=(gcc make autoconf automake bison flex m4 libtool pkgconf patch fakeroot groff texinfo which)
+
+cleanup_after_install() {
+    section "Уборка"
+
+    local remove=() p
+    for p in "${BUILD_TOOLS[@]}"; do
+        pacman -Q "$p" >/dev/null 2>&1 && remove+=("$p")
+    done
+
+    if ((${#remove[@]})); then
+        info "Сборочные пакеты (${#remove[@]}): ${remove[*]}"
+        if [[ ! -t 0 ]] && (( ! ASSUME_YES )); then
+            info "Оставлены: нет TTY для подтверждения (--yes снимет без вопросов)."
+        elif confirm "Удалить сборочные пакеты? (yay поставит их снова при сборке AUR)"; then
+            if $SUDO pacman -Rns --noconfirm "${remove[@]}"; then
+                ok "Сборочные пакеты удалены (${#remove[@]})."
+            else
+                warned "часть сборочных пакетов не удалилась — от них что-то зависит."
+            fi
+        else
+            info "Сборочные пакеты оставлены."
+        fi
+    else
+        ok "Сборочных пакетов нет."
+    fi
+
+    # сироты: обычно это makedepends от сборки (go и т. п.)
+    local orphans=()
+    mapfile -t orphans < <(pacman -Qtdq 2>/dev/null || true)
+    if ((${#orphans[@]})); then
+        info "Сирот: ${#orphans[@]} — ${orphans[*]}"
+        if [[ ! -t 0 ]] && (( ! ASSUME_YES )); then
+            info "Оставлены: нет TTY (sudo pacman -Rns ${orphans[*]})."
+        elif confirm "Удалить сирот?"; then
+            if $SUDO pacman -Rns --noconfirm "${orphans[@]}"; then
+                ok "Сироты удалены (${#orphans[@]})."
+            else
+                warned "часть сирот не удалилась."
+            fi
+        else
+            info "Сироты оставлены."
+        fi
+    else
+        ok "Сирот нет."
+    fi
+
+    # кэш пакетов: держим по три последние версии
+    if command -v paccache >/dev/null 2>&1; then
+        if $SUDO paccache -r -k3 >/dev/null 2>&1; then
+            ok "Кэш пакетов: оставлено по 3 версии."
+        else
+            warned "paccache не отработал."
+        fi
+        $SUDO paccache -ruk0 >/dev/null 2>&1 || true
+    else
+        info "paccache нет — кэш не чистился (pacman -S pacman-contrib)."
+    fi
+
+    # отчёты установщика — в состояние пользователя, а не в репозиторий
+    rm -f -- "$SCRIPT_DIR/packages-current.txt" "$SCRIPT_DIR/foreign-current.txt" 2>/dev/null || true
+    rm -rf -- /tmp/yay-build.* 2>/dev/null || true
+}
+
+if (( DO_CLEANUP )); then
+    cleanup_after_install
+fi
 
 # =============================================================================
 # 7. Отчёт
