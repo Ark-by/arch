@@ -47,13 +47,6 @@ Variants {
                     MouseArea { anchors.fill: parent; onClicked: modelData.activate() }
                 }
             }
-
-            Text {                            // монитор ресурсов
-                text: "CPU " + ("" + Math.round(SysInfo.cpu)).padStart(3, "") + "% RAM " + ("" + Math.round(SysInfo.memPct)).padStart(3, "") + "%"
-                color: Theme.accent; font.pixelSize: 13; font.bold: true
-                font.family: "JetBrainsMono Nerd Font"
-                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: UiState.toggle("monitor") }
-            }
         }
 
         // ---------------- ЦЕНТР: ДАТА И ВРЕМЯ ----------------
@@ -73,12 +66,6 @@ Variants {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 12
 
-            IconButton {                      // обход блокировок (щит)
-                text: "\uf132"
-                baseColor: Theme.accent
-                hoverColor: Theme.fg
-                onClicked: UiState.toggle("services")
-            }
             IconButton {                      // горячие клавиши (клавиатура)
                 text: "\uf11c"
                 baseColor: Theme.accent

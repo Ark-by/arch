@@ -1,1 +1,0 @@
-/home/ark/Programs/MouseBattery/quickshell/BatteryWidget.qml

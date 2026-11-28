@@ -6,16 +6,15 @@
 #    1. ставит пакеты из packages.txt и AUR-пакеты из aur.txt;
 #    2. создаёт XDG-каталоги (~/Documents, ~/Downloads и т. д.);
 #    3. восстанавливает config/ -> ~/.config (с бэкапом существующего);
-#    4. чинит симлинки внутри конфигов (BatteryWidget, обои);
+#    4. чинит ссылки внутри конфигов (пути к обоям);
 #    5. разворачивает extras/:
 #         extras/local-bin/*            -> ~/.local/bin/         (chmod +x)
-#         extras/.zshrc, extras/.bashrc -> ~/
-#         extras/.oh-my-zsh/**          -> ~/.oh-my-zsh/         (поверх, не затирая)
+#         extras/Wallpapers/*           -> ~/Pictures/Wallpapers/
 #         extras/etc/**                 -> /etc/**               (sudo)
 #         extras/Programs/*             -> ~/Programs/
 #         extras/udev/*.rules           -> /etc/udev/rules.d/    (sudo, если есть)
 #    6. включает greetd + hyprlogin как экран входа (vt1);
-#    7. проверяет shell, fastfetch, Firefox policies, команды Hyprland;
+#    7. проверяет shell (fish), fastfetch, команды Hyprland;
 #    8. печатает отчёт: сделано / предупреждения / требует рук.
 #
 #  Запуск: из корня репозитория, обычным пользователем (не root).
@@ -311,45 +310,6 @@ if (( DO_CONFIG )); then
         ok "Восстановлен ~/.config/$name"
     done
 
-    # --- BatteryWidget.qml: в репозитории это симлинк на отдельный проект ---
-    BW="$HOME/.config/quickshell/BatteryWidget.qml"
-    MB_DIR="$HOME/Programs/MouseBattery"
-    MB_QML=""
-    for candidate in \
-        "$MB_DIR/quickshell/BatteryWidget.qml" \
-        "$MB_DIR/BatteryWidget.qml"; do
-        [[ -f "$candidate" ]] && { MB_QML="$candidate"; break; }
-    done
-
-    needs_bw=0
-    if [[ -L "$BW" && ! -e "$BW" ]]; then
-        needs_bw=1
-    elif [[ -f "$BW" && ! -L "$BW" ]] && head -n1 "$BW" 2>/dev/null | grep -q '^/home/.*MouseBattery'; then
-        needs_bw=1
-    fi
-
-    if (( needs_bw )); then
-        if [[ -n "$MB_QML" ]]; then
-            cp -f -- "$MB_QML" "$BW"
-            ok "BatteryWidget.qml восстановлен из $MB_QML"
-        else
-            cat > "$BW" <<'QML'
-import QtQuick
-
-// Заглушка: полный проект MouseBattery хранится отдельно от репозитория.
-Item {
-    property color panelBackground: "transparent"
-    property color panelForeground: "white"
-    property color panelSurface: "transparent"
-    property color panelAccent: "white"
-    implicitWidth: 0
-    implicitHeight: 0
-}
-QML
-            manual "BatteryWidget.qml — заглушка. Нужен проект ~/Programs/MouseBattery."
-        fi
-    fi
-
     # --- обои: путь мог остаться от старой установки ---
     WALLPAPER_FILE="$HOME/.config/quickshell/wallpaper.txt"
     if [[ -f "$WALLPAPER_FILE" ]]; then
@@ -391,12 +351,11 @@ restore_extras() {
         manual "extras/local-bin пуст — скрипт скачивания обоев не восстановлен."
     fi
 
-    # 4.2 dotfiles в корне extras/ (.zshrc, .bashrc, .zprofile, ...)
+    # 4.2 dotfiles в корне extras/ (например .bashrc, .bash_profile)
     local item base
     mapfile -d '' EXTRAS_ROOTS < <(find "$EXTRAS_DIR" -mindepth 1 -maxdepth 1 -name '.*' -print0)
     for item in "${EXTRAS_ROOTS[@]}"; do
         base="$(basename "$item")"
-        [[ "$base" == ".oh-my-zsh" ]] && continue
         if [[ -e "$HOME/$base" || -L "$HOME/$base" ]]; then
             ensure_backup_dir
             mv -- "$HOME/$base" "$BACKUP_DIR/home-$base"
@@ -405,33 +364,7 @@ restore_extras() {
         ok "Восстановлен ~/$base"
     done
 
-    # 4.3 oh-my-zsh: тема копируется поверх, фреймворк доставляется при отсутствии
-    if [[ -d "$EXTRAS_DIR/.oh-my-zsh" ]]; then
-        mkdir -p "$HOME/.oh-my-zsh"
-        cp -a -- "$EXTRAS_DIR/.oh-my-zsh/." "$HOME/.oh-my-zsh/"
-
-        if [[ -f "$HOME/.oh-my-zsh/oh-my-zsh.sh" ]]; then
-            ok "Тема ark на месте (oh-my-zsh уже установлен)."
-        elif command -v git >/dev/null 2>&1; then
-            info "oh-my-zsh не установлен — клонирую фреймворк..."
-            OMZ_TMP="$HOME/.oh-my-zsh-framework.$$"
-            if git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$OMZ_TMP" 2>/dev/null; then
-                cp -a -- "$OMZ_TMP/." "$HOME/.oh-my-zsh/"
-                rm -rf -- "$OMZ_TMP"
-                ok "oh-my-zsh установлен, тема ark на месте."
-            else
-                rm -rf -- "$OMZ_TMP"
-                manual "Не удалось скачать oh-my-zsh. Вручную:
-    git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh"
-            fi
-        else
-            manual "Нет git — oh-my-zsh не установлен, тема ark не заработает."
-        fi
-    else
-        manual "extras/.oh-my-zsh отсутствует — тема ark не восстановлена."
-    fi
-
-    # 4.4 /etc/** (firefox policies, udev-правила и прочее)
+    # 4.4 /etc/** (greetd, hyprlogin, udev-правила и прочее)
     if [[ -d "$EXTRAS_DIR/etc" ]]; then
         local rel target
         while IFS= read -r -d '' f; do
@@ -447,7 +380,7 @@ restore_extras() {
                 warned "udevadm не отработал, правила применятся после перезагрузки."
         fi
     else
-        manual "extras/etc отсутствует — Firefox policies и udev-правила не установлены."
+        manual "extras/etc отсутствует — greetd/hyprlogin и udev-правила не установлены."
     fi
 
     # 4.5 ~/Programs
@@ -464,8 +397,21 @@ restore_extras() {
             ok "Восстановлен ~/Programs/$base"
         done
     else
-        manual "extras/Programs пуст — MouseBattery (виджет батареи) не восстановлен."
+        info "extras/Programs нет — пропуск."
     fi
+
+    # 4.5b обои -> ~/Pictures/Wallpapers (оттуда их берёт WallpaperPicker)
+    if [[ -d "$EXTRAS_DIR/Wallpapers" ]] && compgen -G "$EXTRAS_DIR/Wallpapers/*" > /dev/null; then
+        mkdir -p "$HOME/Pictures/Wallpapers"
+        local wp
+        for wp in "$EXTRAS_DIR"/Wallpapers/*; do
+            cp -a -- "$wp" "$HOME/Pictures/Wallpapers/$(basename "$wp")"
+        done
+        ok "Обои восстановлены в ~/Pictures/Wallpapers"
+    else
+        warned "extras/Wallpapers пуст — обоев по умолчанию не будет."
+    fi
+
     # 4.6 ~/ из extras/home — обои и прочие файлы
     if [[ -d "$EXTRAS_DIR/home" ]]; then
         local home_src="$EXTRAS_DIR/home/$USER"
@@ -664,8 +610,8 @@ check_cmd() {
 }
 
 check_cmd hyprland      "пакет hyprland"
-check_cmd qs            "пакет quickshell (Super+R/W/T/Z/I/A)"
-check_cmd zed           "пакет zed (Super+S)"
+check_cmd qs            "пакет quickshell (Super+R/W/T/A)"
+check_cmd micro         "пакет micro (Super+S)"
 check_cmd playerctl     "мультимедиа-клавиши"
 check_cmd uwsm          "сессия Hyprland через UWSM"
 check_cmd fastfetch     "пакет fastfetch (приветствие в терминале)"
@@ -673,40 +619,27 @@ check_cmd rustdesk      "AUR rustdesk-bin"
 check_cmd gdbus         "пакет glib2 (проверка портала)"
 
 # --- shell и fastfetch ---
-if [[ "${SHELL:-}" == */zsh ]]; then
-    ok "Login shell: zsh"
+if [[ "${SHELL:-}" == */fish ]]; then
+    ok "Login shell: fish"
 else
-    if confirm "Сделать zsh оболочкой по умолчанию (chsh)?"; then
-        if chsh -s "$(command -v zsh)"; then
-            ok "Login shell изменён на zsh (применится после перезахода)."
+    if confirm "Сделать fish оболочкой по умолчанию (chsh)?"; then
+        if chsh -s "$(command -v fish)"; then
+            ok "Login shell изменён на fish (применится после перезахода)."
         else
-            manual "chsh не удался. Вручную: chsh -s /usr/bin/zsh"
+            manual "chsh не удался. Вручную: chsh -s /usr/bin/fish"
         fi
     else
-        manual "Login shell не zsh (${SHELL:-неизвестно}) — fastfetch не появится.
-    Включите: chsh -s /usr/bin/zsh  и перезайдите"
+        manual "Login shell не fish (${SHELL:-неизвестно}) — fastfetch не появится.
+    Включите: chsh -s /usr/bin/fish  и перезайдите"
     fi
 fi
 
-if [[ -f "$HOME/.zshrc" ]]; then
-    if grep -q 'fastfetch' "$HOME/.zshrc"; then
-        ok "~/.zshrc запускает fastfetch."
+if [[ -f "$HOME/.config/fish/config.fish" ]]; then
+    if grep -q 'fastfetch' "$HOME/.config/fish/config.fish"; then
+        ok "~/.config/fish/config.fish запускает fastfetch."
     else
-        manual "В ~/.zshrc нет вызова fastfetch."
+        manual "В config.fish нет вызова fastfetch."
     fi
-fi
-
-# --- Firefox policies ---
-if [[ -f /etc/firefox/policies/policies.json ]]; then
-    if command -v jq >/dev/null 2>&1 && \
-       jq -e '.policies.Bookmarks' /etc/firefox/policies/policies.json >/dev/null 2>&1; then
-        ok "Firefox policies: закладки прописаны."
-    else
-        warned "policies.json установлен, но ключ Bookmarks не найден."
-    fi
-    info "Проверка в браузере: about:policies. Закладки применяются к профилю при его создании."
-else
-    manual "/etc/firefox/policies/policies.json не установлен — закладки Firefox не появятся."
 fi
 
 # --- скрипт обоев ---
@@ -755,7 +688,7 @@ cat <<'NEXT'
   2. На экране hyprlogin выберите сессию Hyprland и войдите.
   3. Откройте терминал — должен появиться fastfetch.
   4. Панель: qs (если не запущена). Обои: Super+W. Темы: Super+T.
-  5. Firefox: закладки появятся в новом профиле; в существующем проверьте about:policies.
+  5. Редактор: Super+S или micro <файл>. Оболочка: fish, приветствие — fastfetch.
 
 Если hyprlogin не запустится — Ctrl+Alt+F3 (или F6) даёт резервную консоль,
 там можно отключить экран входа: sudo systemctl disable greetd.service
@@ -769,12 +702,13 @@ RustDesk:
   • управление этим ПК по Wayland всё равно ограничено порталом:
     показ экрана работает надёжно, ввод — как повезёт с версией RustDesk.
 
-Альтернатива без DM — ~/.zprofile:
+Альтернатива без DM — в ~/.config/fish/config.fish:
 
-    if [[ -z "${WAYLAND_DISPLAY:-}" && "$(tty 2>/dev/null)" == "/dev/tty1" ]] &&
-       uwsm check may-start >/dev/null 2>&1; then
-        exec uwsm start hyprland.desktop
-    fi
+    if status is-login; and test -z "$WAYLAND_DISPLAY"; and test (tty) = /dev/tty1
+        if uwsm check may-start >/dev/null 2>&1
+            exec uwsm start hyprland.desktop
+        end
+    end
 
 UFW установлен, но НЕ включён: sudo ufw enable
 
@@ -783,6 +717,7 @@ UFW установлен, но НЕ включён: sudo ufw enable
 # можно убрать лишнее (в packages.txt этих пакетов уже нет):
 #
 #   sudo pacman -Rns yay-debug ly polkit-kde-agent wofi xf86-video-nouveau qt5-wayland dolphin htop vim smartmontools grim slurp usbutils openssh
+#   sudo pacman -Rns zed zsh zsh-autosuggestions zsh-syntax-highlighting nano
 #   sudo pacman -Rns $(pacman -Qdtq)
 #
 # Вторая команда убирает сирот после первой. Если она ругнётся на пустой

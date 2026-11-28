@@ -3,11 +3,11 @@ amd-ucode
 base
 base-devel
 btrfs-progs
-cloudflare-warp-bin
 dunst
 efibootmgr
 fastfetch
 firefox
+fish
 git
 greetd
 gst-plugin-pipewire
@@ -18,8 +18,8 @@ kitty
 libpulse
 linux
 linux-firmware
+micro
 mkinitcpio
-nano
 noto-fonts
 noto-fonts-emoji
 pipewire
@@ -42,8 +42,4 @@ xdg-user-dirs
 xdg-utils
 yay
 yazi
-zed
 zram-generator
-zsh
-zsh-autosuggestions
-zsh-syntax-highlighting

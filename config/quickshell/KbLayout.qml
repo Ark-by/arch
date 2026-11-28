@@ -9,17 +9,11 @@ Singleton {
     property string name: ""                         // например "Russian"
     readonly property string code: shortCode(root.name)
 
-    // Полное название раскладки -> короткий код
+    // Полное название раскладки -> короткий код (в hyprland.lua только us,ru)
     function shortCode(n) {
         const l = n.toLowerCase()
         if (l === "") return "??"
-        if (l.includes("russian"))   return "RU"
-        if (l.includes("english"))   return "EN"
-        if (l.includes("ukrain"))    return "UA"
-        if (l.includes("german"))    return "DE"
-        if (l.includes("french"))    return "FR"
-        if (l.includes("spanish"))   return "ES"
-        return n.slice(0, 2).toUpperCase()
+        return l.includes("ru") ? "RU" : "EN"
     }
 
     // Hyprland присылает событие при каждой смене раскладки

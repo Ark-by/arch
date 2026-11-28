@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # set-theme — одна палитра из ~/.config/themes/<name>.json на все компоненты:
-#   quickshell, kitty, hyprland, yazi, zed (+ zsh/fastfetch через ANSI)
+#   quickshell, kitty, hyprland, yazi, micro (+ fish/fastfetch через ANSI)
 #
-# Шаблоны: ~/.config/themes/templates/{flavor.toml.tpl,tmtheme.xml.tpl,zed-theme.json.tpl}
-# Переменные: ZED_ALPHA (по умолчанию cc = 80%), YAZI_FLAVOR (по умолчанию ark)
+# Шаблоны: ~/.config/themes/templates/{flavor.toml.tpl,tmtheme.xml.tpl,micro.micro.tpl}
+# Переменные: MICRO_SCHEME (по умолчанию ark), YAZI_FLAVOR (по умолчанию ark)
 set -euo pipefail
 
 name="${1:-}"
@@ -25,7 +25,7 @@ opt() { jq -r --arg k "$1" '.[$k] // empty' "$P_SRC"; }
 ansi(){ jq -r ".ansi[$1]" "$P_SRC"; }
 pick(){ if [[ -n "$1" ]]; then printf '%s' "$1"; else printf '%s' "$2"; fi; }
 
-ZED_ALPHA="${ZED_ALPHA:-cc}"
+MICRO_SCHEME="${MICRO_SCHEME:-ark}"
 YAZI_FLAVOR="${YAZI_FLAVOR:-ark}"
 
 load_palette() {
@@ -52,7 +52,6 @@ load_palette() {
   CURSOR=$(pick      "$(opt cursor)"       "$ACCENT")
   SEL_BG=$(pick      "$(opt selection)"    "$ACCENT")
   SEL_FG=$(pick      "$(opt selection_fg)" "$BG")
-  ZED_BG="${BG}${ZED_ALPHA}"
   # hex без # — формат hyprlock/hyprlogin
   BG8=${BG#\#}; SURFACE8=${SURFACE#\#}; FG8=${FG#\#}; MUTED8=${MUTED#\#}
   ACCENT8=${ACCENT#\#}
@@ -70,7 +69,6 @@ render() {
   fi
   local args=(
     -e "s|@TITLE@|$TITLE|g"
-    -e "s|@ZED_BG@|$ZED_BG|g"
     -e "s|@BG@|$BG|g"
     -e "s|@SURFACE@|$SURFACE|g"
     -e "s|@FG@|$FG|g"
@@ -175,34 +173,15 @@ else
       "Экран входа применится после: sudo install -Dm644 $hyprlogin_stage /etc/hyprlogin/hyprlogin.conf"
   fi
 fi
-# ---------- 5. Zed: темы для ВСЕХ палитр + выбор активной ----------
-zed_dir="$cfg/zed/themes"
-mkdir -p "$zed_dir"
-for f in "$themes"/*.json; do
-  [[ "$f" == "$themes/templates" ]] && continue
-  base="$(basename "$f" .json)"
-  load_palette "$f"
-  render "$tpl/zed-theme.json.tpl" "$zed_dir/ark-$base.json"
-done
 
-load_palette "$src"
-zed_name="Ark $TITLE"
-zed_settings="$cfg/zed/settings.json"
-mkdir -p "$(dirname "$zed_settings")"
-if [[ -f "$zed_settings" ]] && grep -qE '"theme"[[:space:]]*:' "$zed_settings"; then
-  sed -i -E "s|(\"theme\"[[:space:]]*:[[:space:]]*\")[^\"]*(\")|\1${zed_name}\2|" "$zed_settings"
-elif [[ -f "$zed_settings" ]]; then
-  tmp="$(mktemp)"
-  awk -v t="$zed_name" '{ print } !done && /\{/ { printf "  \"theme\": \"%s\",\n", t; done=1 }' "$zed_settings" > "$tmp"
-  mv "$tmp" "$zed_settings"
-else
-  printf '{\n  "theme": "%s"\n}\n' "$zed_name" > "$zed_settings"
-fi
+# ---------- 5. Micro: активная схема из палитры ----------
+mkdir -p "$cfg/micro/colorschemes"
+render "$tpl/micro.micro.tpl" "$cfg/micro/colorschemes/$MICRO_SCHEME.micro"
 
 echo "Тема применена: $TITLE"
 echo "  quickshell  — live (theme.json)"
 echo "  kitty       — live (SIGUSR1)"
 echo "  hyprland    — live (hyprctl reload)"
-echo "  zed         — live (\"$zed_name\")"
+echo "  micro       — перезапусти micro (или :reload)"
 echo "  yazi        — перезапусти yazi"
-echo "  zsh / fastfetch — через ANSI, само"
+echo "  fish / fastfetch — через ANSI, само"

@@ -5,7 +5,7 @@ import Quickshell.Io
 
 Singleton {
     id: root
-    property string panel: ""        // "", "launcher", "wallpaper", "themes"
+    property string panel: ""        // "", "launcher", "wallpaper", "themes", "power", "shortcuts"
     property string wallpaper: ""
     readonly property string home: Quickshell.env("HOME")
 

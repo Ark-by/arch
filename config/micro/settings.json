@@ -1,0 +1,19 @@
+{
+    "colorscheme": "ark",
+    "truecolor": true,
+    "mouse": true,
+    "syntax": true,
+    "autoindent": true,
+    "tabstospaces": true,
+    "tabsize": 4,
+    "ruler": true,
+    "statusline": true,
+    "hlsearch": true,
+    "cursorline": true,
+    "savecursor": true,
+    "saveundo": true,
+    "scrollbar": true,
+    "scrollspeed": 2,
+    "encoding": "utf-8",
+    "fileformat": "unix"
+}
