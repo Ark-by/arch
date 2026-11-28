@@ -28,14 +28,13 @@ bind(mainMod .. " + escape", hl.dsp.exec_cmd("command -v hyprshutdown >/dev/null
 bind(mainMod .. " + Q", hl.dsp.exec_cmd(terminal),    "Приложения: Терминал")
 bind(mainMod .. " + B", hl.dsp.exec_cmd(browser),     "Приложения: Браузер")
 bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager), "Приложения: Файловый менеджер")
-bind(mainMod .. " + S", hl.dsp.exec_cmd("kitty -e micro"), "Приложения: Micro")
 
 -- Меню панели (Quickshell)
 bind(mainMod .. " + R",  hl.dsp.exec_cmd("qs ipc call ui launcher"),   "Меню панели: Меню приложений")
 bind(mainMod .. " + W",  hl.dsp.exec_cmd("qs ipc call ui wallpapers"), "Меню панели: Настройки — обои")
 bind(mainMod .. " + T",  hl.dsp.exec_cmd("qs ipc call ui themes"),     "Меню панели: Настройки — темы")
 bind(mainMod .. " + A", hl.dsp.exec_cmd("qs ipc call ui shortcuts"),   "Меню панели: Эта справка")
-bind(mainMod .. " + comma", hl.dsp.exec_cmd("qs ipc call ui settings"), "Меню панели: Настройки")
+bind(mainMod .. " + S", hl.dsp.exec_cmd("qs ipc call ui settings"), "Меню панели: Настройки")
 
 -- Окна
 bind(mainMod .. " + C", hl.dsp.window.close(),                        "Окна: Закрыть окно")
