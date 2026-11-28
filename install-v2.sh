@@ -646,14 +646,14 @@ if [[ -f "$HOME/.config/fish/config.fish" ]]; then
     fi
 fi
 
-# --- скрипт обоев ---
-if [[ -x "$HOME/.local/bin/wallhaven-download.sh" ]]; then
-    ok "wallhaven-download.sh на месте и исполняемый."
-    for dep in wget jq; do
-        command -v "$dep" >/dev/null 2>&1 || manual "Для обоев нужен $dep (pacman -S $dep)"
+# --- страница обоев ---
+if [[ -x "$HOME/.local/bin/wallhaven-list.sh" ]]; then
+    ok "wallhaven-list.sh на месте и исполняемый."
+    for dep in curl jq; do
+        command -v "$dep" >/dev/null 2>&1 || manual "Для страницы обоев нужен $dep (pacman -S $dep)"
     done
 else
-    manual "~/.local/bin/wallhaven-download.sh отсутствует — скачивание обоев не работает."
+    manual "~/.local/bin/wallhaven-list.sh отсутствует — страница обоев не загрузится."
 fi
 
 # --- Hyprland и Lua ---

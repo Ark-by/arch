@@ -14,5 +14,5 @@ set -gx VISUAL micro
 set -gx PAGER less
 set -gx LESS "-R"
 
-# локальные бинарники первыми в PATH (set-theme, wallhaven-download.sh)
+# локальные бинарники первыми в PATH (set-theme, wallhaven-list.sh)
 fish_add_path --move --prepend "$HOME/.local/bin"

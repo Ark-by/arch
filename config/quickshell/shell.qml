@@ -8,6 +8,7 @@ ShellRoot {
     PowerMenu {}
     ShortcutsMenu {}
     SettingsWindow { id: settingsWin }
+    WallpaperPreview {}
 
     // Команды, которые вызывает Hyprland по горячим клавишам
     IpcHandler {

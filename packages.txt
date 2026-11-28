@@ -2,6 +2,7 @@
 amd-ucode
 base
 btrfs-progs
+curl
 dunst
 efibootmgr
 fastfetch
@@ -34,7 +35,6 @@ ttf-jetbrains-mono-nerd
 ufw
 uwsm
 vulkan-nouveau
-wget
 wireplumber
 xdg-desktop-portal-hyprland
 xdg-utils
